@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import authRoutes from './routes/auth';
 import crmRoutes from './routes/crm';
@@ -38,20 +39,18 @@ app.use('/api/', limiter);
 // Static uploads path mapping
 app.use('/uploads', express.static('uploads'));
 
-// Base Route
-app.get('/', (req: Request, res: Response) => {
-  res.json({ ok: true, message: 'BSC Retail CRM API Server is active' });
-});
-
-// Bind routers
+// Bind API routers
 app.use('/api/auth', authRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/cash', cashRoutes);
 app.use('/api/vm', vmRoutes);
 
-// Unhandled Route Handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({ ok: false, error: 'Endpoint not found' });
+// Serve static frontend build assets
+app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+
+// Fallback all other routing requests to React Router index.html
+app.get('*', (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
 });
 
 // Error handling middleware
