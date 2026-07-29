@@ -28,7 +28,7 @@ export const saveSettlement = async (req: Request, res: Response) => {
     }
 
     // Wrap in a transaction to ensure atomic execution
-    const settlement = await prisma.$transaction(async (tx) => {
+    const settlement = await prisma.$transaction(async (tx: any) => {
       // 1. Delete previous counter reports if existing
       const existing = await tx.cashSettlement.findUnique({
         where: { date }

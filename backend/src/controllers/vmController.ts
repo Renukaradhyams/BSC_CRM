@@ -65,7 +65,7 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
       });
       // Group by aspect and calculate average score
       const aspectGroups: { [key: string]: { sum: number, count: number } } = {};
-      entries.forEach(e => {
+      entries.forEach((e: any) => {
         // Mock aspect grouping from points table
         const aspect = "Standard Aspect"; // Or fetch point aspect relations
         if (!aspectGroups[aspect]) aspectGroups[aspect] = { sum: 0, count: 0 };
@@ -83,7 +83,7 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
 
     const floorStatus = await Promise.all(
       ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor"].map(async (floor) => {
-        const sub = floorSubmissions.find(s => s.floor === floor);
+        const sub = floorSubmissions.find((s: any) => s.floor === floor);
         return {
           floor,
           done: !!sub,
@@ -119,7 +119,7 @@ export const getChecklist = async (req: Request, res: Response) => {
     });
     return res.json({
       ok: true,
-      points: points.map(p => ({
+      points: points.map((p: any) => ({
         point_no: p.pointNo,
         aspect: p.aspect,
         point: p.point,
@@ -149,7 +149,7 @@ export const getTodaySubmission = async (req: Request, res: Response) => {
 
     const answered: { [key: string]: any } = {};
     if (submission) {
-      submission.entries.forEach(e => {
+      submission.entries.forEach((e: any) => {
         answered[e.pointNo] = {
           value: e.value,
           remarks: e.remarks,
@@ -189,7 +189,7 @@ export const submitChecklist = async (req: Request, res: Response) => {
     });
     const score = count > 0 ? sum / count : 5.0;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       const sub = await tx.vMSubmission.create({
         data: {
           date: todayStr,
@@ -257,7 +257,7 @@ export const getHistory = async (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
-      history: list.map(item => ({
+      history: list.map((item: any) => ({
         date: item.date,
         score: parseFloat(item.score.toString())
       }))
@@ -288,7 +288,7 @@ export const getSubmissionDetail = async (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
-      entries: submission.entries.map(e => ({
+      entries: submission.entries.map((e: any) => ({
         point_no: e.pointNo,
         aspect: "Checklist aspect",
         point: "Point description",

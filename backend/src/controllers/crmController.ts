@@ -40,7 +40,7 @@ export const getDashboard = async (req: Request, res: Response) => {
 
     // Calculate NPS / CSI
     let promoters = 0, detractors = 0, satisfiedCsi = 0, totalFeedbackWithNps = 0, csiTotal = 0;
-    feedbacks.forEach(f => {
+    feedbacks.forEach((f: any) => {
       // CSI: q0 is Service, scale is Excellent (5), Good (4), Average (3), Poor (2), Very Poor (1)
       if (f.q0) {
         let score = 3;
@@ -67,7 +67,7 @@ export const getDashboard = async (req: Request, res: Response) => {
     const csi = feedbacks.length > 0 ? Math.round((csiTotal / (feedbacks.length * 5)) * 100) : 100;
 
     // Voices ticker reviews (comments/voice from positive feedbacks)
-    const reviews = feedbacks.filter(f => f.yourVoice).map(f => ({
+    const reviews = feedbacks.filter((f: any) => f.yourVoice).map((f: any) => ({
       name: f.custName || 'Anonymous',
       area: f.area,
       text: f.yourVoice
@@ -77,7 +77,7 @@ export const getDashboard = async (req: Request, res: Response) => {
       ok: true,
       today: todayStr,
       metrics: {
-        totalFootfall: footfalls.reduce((sum, item) => sum + item.count, 0),
+        totalFootfall: footfalls.reduce((sum: number, item: any) => sum + item.count, 0),
         totalBills: summary ? summary.billsCount : 0,
         openDiverts: openDivertsCount,
         feedbacksCollected: feedbacks.length,
@@ -529,7 +529,7 @@ export const sendDER = async (req: Request, res: Response) => {
       where: { date: todayStr }
     });
 
-    const totalFootfall = footfalls.reduce((sum, item) => sum + item.count, 0);
+    const totalFootfall = footfalls.reduce((sum: number, item: any) => sum + item.count, 0);
     const totalBills = summary ? summary.billsCount : 0;
     const abv = totalBills > 0 ? Math.round(totalFootfall / totalBills) : 0;
 
@@ -573,7 +573,7 @@ export const getUsers = async (req: Request, res: Response) => {
     });
     return res.json({
       ok: true,
-      users: users.map(u => ({
+      users: users.map((u: any) => ({
         id: u.id,
         name: u.name,
         email: u.email,
