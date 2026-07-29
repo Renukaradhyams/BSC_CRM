@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import prisma from '../config/db';
+import { query, transaction } from '../config/db';
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcryptjs';
 import { AuthenticatedRequest } from '../middleware/auth';
+import mysql from 'mysql2/promise';
 
 // Helper to format date "DD/MM/YYYY" from Date object
 export const formatDateString = (dateObj: Date): string => {
@@ -13,35 +14,20 @@ export const formatDateString = (dateObj: Date): string => {
   return `${dd}/${mm}/${yyyy}`;
 };
 
-// 1. Get Dashboard Summary (CRM and TV View)
+// 1. Get Dashboard Summary
 export const getDashboard = async (req: Request, res: Response) => {
   try {
     const todayStr = req.query.date as string || formatDateString(new Date());
 
-    // 1. Hourly slots visitor counts
-    const footfalls = await prisma.footfallEntry.findMany({
-      where: { date: todayStr, deletedAt: null }
-    });
+    const footfalls = await query('SELECT * FROM FootfallEntry WHERE date = ? AND deleted_at IS NULL', [todayStr]);
+    const [summary] = await query('SELECT * FROM DailySummary WHERE date = ? AND deleted_at IS NULL LIMIT 1', [todayStr]);
+    const [{ cnt: openDivertsCount }] = await query(
+      "SELECT COUNT(*) as cnt FROM Divert WHERE status IN ('open','sourcing','available') AND deleted_at IS NULL"
+    );
+    const feedbacks = await query('SELECT * FROM Feedback WHERE date = ? AND deleted_at IS NULL', [todayStr]);
 
-    // 2. Daily summary (Bills count)
-    const summary = await prisma.dailySummary.findUnique({
-      where: { date: todayStr }
-    });
-
-    // 3. Open Diverts count
-    const openDivertsCount = await prisma.divert.count({
-      where: { status: { in: ['open', 'sourcing', 'available'] }, deletedAt: null }
-    });
-
-    // 4. Feedbacks metrics
-    const feedbacks = await prisma.feedback.findMany({
-      where: { date: todayStr, deletedAt: null }
-    });
-
-    // Calculate NPS / CSI
-    let promoters = 0, detractors = 0, satisfiedCsi = 0, totalFeedbackWithNps = 0, csiTotal = 0;
+    let promoters = 0, detractors = 0, totalFeedbackWithNps = 0, csiTotal = 0;
     feedbacks.forEach((f: any) => {
-      // CSI: q0 is Service, scale is Excellent (5), Good (4), Average (3), Poor (2), Very Poor (1)
       if (f.q0) {
         let score = 3;
         if (f.q0.toLowerCase().includes('excellent')) score = 5;
@@ -51,630 +37,329 @@ export const getDashboard = async (req: Request, res: Response) => {
         else if (f.q0.toLowerCase().includes('very')) score = 1;
         csiTotal += score;
       }
-      // NPS: q1 is Recommend
       if (f.q1) {
         totalFeedbackWithNps++;
         const rec = f.q1.toLowerCase();
-        if (rec.includes('yes') || rec.includes('definitely') || rec.includes('10') || rec.includes('9')) {
-          promoters++;
-        } else if (rec.includes('no') || rec.includes('not') || rec.includes('maybe') || rec.includes('6') || rec.includes('5')) {
-          detractors++;
-        }
+        if (rec.includes('yes') || rec.includes('definitely')) promoters++;
+        else if (rec.includes('no') || rec.includes('not') || rec.includes('maybe')) detractors++;
       }
     });
 
     const nps = totalFeedbackWithNps > 0 ? Math.round(((promoters - detractors) / totalFeedbackWithNps) * 100) : 0;
     const csi = feedbacks.length > 0 ? Math.round((csiTotal / (feedbacks.length * 5)) * 100) : 100;
-
-    // Voices ticker reviews (comments/voice from positive feedbacks)
     const reviews = feedbacks.filter((f: any) => f.yourVoice).map((f: any) => ({
-      name: f.custName || 'Anonymous',
-      area: f.area,
-      text: f.yourVoice
+      name: f.custName || 'Anonymous', area: f.area, text: f.yourVoice
     }));
 
     return res.json({
-      ok: true,
-      today: todayStr,
+      ok: true, today: todayStr,
       metrics: {
         totalFootfall: footfalls.reduce((sum: number, item: any) => sum + item.count, 0),
         totalBills: summary ? summary.billsCount : 0,
-        openDiverts: openDivertsCount,
-        feedbacksCollected: feedbacks.length,
-        nps,
-        csi
+        openDiverts: openDivertsCount, feedbacksCollected: feedbacks.length, nps, csi
       },
-      footfalls,
-      reviews
+      footfalls, reviews
     });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 2. Get Footfall Slots List for a Date
+// 2. Get Footfall Slots
 export const getFootfall = async (req: Request, res: Response) => {
   try {
     const dateStr = req.query.date as string || formatDateString(new Date());
-
-    const footfalls = await prisma.footfallEntry.findMany({
-      where: { date: dateStr, deletedAt: null }
-    });
-
-    const summary = await prisma.dailySummary.findUnique({
-      where: { date: dateStr }
-    });
-
-    return res.json({
-      ok: true,
-      date: dateStr,
-      footfalls,
-      bills: summary ? summary.billsCount : 0
-    });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const footfalls = await query('SELECT * FROM FootfallEntry WHERE date = ? AND deleted_at IS NULL ORDER BY slotStart ASC', [dateStr]);
+    return res.json({ ok: true, footfalls });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 3. Save Footfall Entry for an Hourly Slot
-export const saveFootfall = async (req: AuthenticatedRequest, res: Response) => {
+// 3. Save/Update Footfall Slot
+export const saveFootfall = async (req: Request, res: Response) => {
   try {
-    const { date, slotStart, slotEnd, count, remarks } = req.body;
-    const userName = req.user?.name || 'CRM Staff';
-
+    const { date, slotStart, slotEnd, count, remarks, submittedBy, editedBy } = req.body;
     if (!date || slotStart === undefined || count === undefined) {
-      return res.status(400).json({ ok: false, error: 'Missing required parameters' });
+      return res.status(400).json({ ok: false, error: 'Missing footfall parameters' });
     }
-
-    // Grace Check
-    const settings = await prisma.settings.findFirst({ where: { deletedAt: null } });
-    const graceMin = settings ? settings.footfallGraceMin : 30;
-
-    // Current time checks
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMin = now.getMinutes();
-
-    // Verify if slot is locked (only allowed to edit current slot, or previous slot within grace period)
-    const slotDeadlineHour = slotEnd; // e.g. 11:00 slot ends at 11
-    const minutesPassed = (currentHour - slotDeadlineHour) * 60 + currentMin;
-
-    if (minutesPassed > graceMin && req.user?.role === 'crm_staff') {
-      return res.status(403).json({ ok: false, error: 'Slot is locked. Submission period has expired.' });
-    }
-
-    const entry = await prisma.footfallEntry.upsert({
-      where: { date_slotStart: { date, slotStart } },
-      update: {
-        count: parseInt(count, 10),
-        remarks: remarks || null,
-        editedBy: userName,
-        deletedAt: null
-      },
-      create: {
-        date,
-        slotStart,
-        slotEnd,
-        count: parseInt(count, 10),
-        remarks: remarks || null,
-        submittedBy: userName
-      }
-    });
-
-    return res.json({ ok: true, entry });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    await query(
+      `INSERT INTO FootfallEntry (date, slotStart, slotEnd, count, remarks, submittedBy, editedBy)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE count = VALUES(count), remarks = VALUES(remarks), editedBy = VALUES(editedBy)`,
+      [date, slotStart, slotEnd, count, remarks || null, submittedBy || 'system', editedBy || null]
+    );
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 4. Save Day-End Bills count
-export const saveDailyBills = async (req: AuthenticatedRequest, res: Response) => {
+// 4. Save Daily Bills Count
+export const saveDailyBills = async (req: Request, res: Response) => {
   try {
-    const { date, bills } = req.body;
-    if (!date || bills === undefined) {
-      return res.status(400).json({ ok: false, error: 'Missing date or bill count' });
+    const { date, billsCount } = req.body;
+    if (!date || billsCount === undefined) {
+      return res.status(400).json({ ok: false, error: 'Missing bills data' });
     }
-
-    // Cutoff Time Verification
-    const settings = await prisma.settings.findFirst({ where: { deletedAt: null } });
-    const cutoffStr = settings ? settings.footfallEditCutoff : "10:30"; // next morning cutoff
-
-    const now = new Date();
-    const cutoffHour = parseInt(cutoffStr.split(':')[0]);
-    const cutoffMin = parseInt(cutoffStr.split(':')[1]);
-
-    // Check if we are past cutoff of next day
-    const [d, m, y] = date.split('/');
-    const entryDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    const nextDayDeadline = new Date(entryDate.getTime() + 24 * 60 * 60 * 1000);
-    nextDayDeadline.setHours(cutoffHour, cutoffMin, 0, 0);
-
-    if (now > nextDayDeadline && req.user?.role !== 'super_admin' && req.user?.role !== 'admin') {
-      return res.status(403).json({ ok: false, error: 'Edit window closed. Cutoff was at ' + cutoffStr });
-    }
-
-    const summary = await prisma.dailySummary.upsert({
-      where: { date },
-      update: { billsCount: parseInt(bills, 10) },
-      create: { date, billsCount: parseInt(bills, 10) }
-    });
-
-    return res.json({ ok: true, summary });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    await query(
+      'INSERT INTO DailySummary (date, billsCount) VALUES (?, ?) ON DUPLICATE KEY UPDATE billsCount = VALUES(billsCount)',
+      [date, billsCount]
+    );
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 5. Retrieve Customer Feedback Questions Configurations
+// 5. Get Feedback Questions
 export const getFeedbackQuestions = async (req: Request, res: Response) => {
   try {
-    const questions = await prisma.feedbackQuestion.findMany({
-      where: { isActive: true, deletedAt: null },
-      orderBy: { displayOrder: 'asc' }
-    });
+    const questions = await query(
+      'SELECT * FROM FeedbackQuestion WHERE isActive = TRUE AND deleted_at IS NULL ORDER BY displayOrder ASC'
+    );
     return res.json({ ok: true, questions });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 6. Record Customer Feedback Response (Supports Staff & Public)
+// 6. Save Customer Feedback
 export const saveFeedback = async (req: Request, res: Response) => {
   try {
-    const { date, source, area, yourVoice, custName, custMobile, custDob, answers } = req.body;
-    if (!date || !area) {
-      return res.status(400).json({ ok: false, error: 'Date and Area are required' });
+    const { date, source, area, yourVoice, custName, custMobile, custDob,
+      q0, q0_other, q1, q1_other, q2, q2_other, q3, q3_other,
+      q4, q4_other, q5, q5_other, q6, q6_other, q7, q7_other } = req.body;
+
+    if (!date || !source || !area) {
+      return res.status(400).json({ ok: false, error: 'Missing required feedback data' });
     }
 
-    // Answers maps to q0-q7 fields
-    const fData: any = {
-      date,
-      source: source || 'staff',
-      area,
-      yourVoice: yourVoice || null,
-      custName: custName || null,
-      custMobile: custMobile || null,
-      custDob: custDob || null,
-      status: 'new'
-    };
+    const [result]: any = await query(
+      `INSERT INTO Feedback (date, source, area, yourVoice, custName, custMobile, custDob,
+         q0, q0_other, q1, q1_other, q2, q2_other, q3, q3_other,
+         q4, q4_other, q5, q5_other, q6, q6_other, q7, q7_other, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+      [date, source, area, yourVoice || null, custName || null, custMobile || null, custDob || null,
+        q0 || null, q0_other || null, q1 || null, q1_other || null, q2 || null, q2_other || null,
+        q3 || null, q3_other || null, q4 || null, q4_other || null, q5 || null, q5_other || null,
+        q6 || null, q6_other || null, q7 || null, q7_other || null]
+    );
 
-    if (answers && typeof answers === 'object') {
-      Object.keys(answers).forEach(qKey => {
-        if (qKey.startsWith('q')) {
-          fData[qKey] = answers[qKey]?.val || answers[qKey] || '';
-          if (answers[qKey]?.other) {
-            fData[`${qKey}_other`] = answers[qKey].other;
-          }
-        }
-      });
+    const feedbackId = result.insertId;
+
+    // Auto-add negative feedback to call queue
+    const isNegative = (q0 && (q0.toLowerCase().includes('poor') || q0.toLowerCase().includes('very'))) ||
+      (q1 && q1.toLowerCase().includes('no'));
+
+    if (isNegative && custMobile) {
+      await query(
+        `INSERT INTO CallQueue (feedbackId, callType, callAttempts, isDone) VALUES (?, 'negative', 0, FALSE)`,
+        [feedbackId]
+      );
     }
 
-    const feedback = await prisma.feedback.create({
-      data: fData
-    });
-
-    // Check if negative feedback to register in telecaller CallQueue
-    // If CSI rating (q0) is Poor / Very Poor or q1 Recommend is "No"
-    let isNegative = false;
-    if (fData.q0 && (fData.q0.toLowerCase().includes('poor') || fData.q0.toLowerCase().includes('average'))) {
-      isNegative = true;
-    }
-    if (fData.q1 && (fData.q1.toLowerCase().includes('no') || fData.q1.toLowerCase().includes('never'))) {
-      isNegative = true;
-    }
-
-    if (isNegative) {
-      await prisma.callQueue.create({
-        data: {
-          feedbackId: feedback.id,
-          callType: 'negative',
-          callAttempts: 0,
-          isDone: false
-        }
-      });
-    }
-
-    return res.json({ ok: true, feedback });
-  } catch (err: any) {
-    console.error('Feedback save error:', err);
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    return res.json({ ok: true, feedbackId });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 7. Get Call Queue telecaller list
+// 7. Get Call Queue
 export const getCallQueue = async (req: Request, res: Response) => {
   try {
-    const list = await prisma.callQueue.findMany({
-      where: { isDone: false, deletedAt: null },
-      include: { feedback: true }
-    });
-    return res.json({ ok: true, queue: list });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const items = await query(
+      `SELECT cq.*, f.custName, f.custMobile, f.area, f.date, f.q0, f.q1, f.yourVoice
+       FROM CallQueue cq
+       JOIN Feedback f ON cq.feedbackId = f.id
+       WHERE cq.isDone = FALSE AND cq.deleted_at IS NULL
+       ORDER BY cq.created_at DESC`
+    );
+    return res.json({ ok: true, items });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 8. Update Call queue item status
-export const updateCallStatus = async (req: AuthenticatedRequest, res: Response) => {
+// 8. Update Call Queue Status
+export const updateCallStatus = async (req: Request, res: Response) => {
   try {
-    const { id, callStatus, callNote, followupDate, escalated } = req.body;
+    const { id, callStatus, callNote, isDone, followupDate } = req.body;
+    if (!id) return res.status(400).json({ ok: false, error: 'Missing queue item ID' });
 
-    if (!id || !callStatus) {
-      return res.status(400).json({ ok: false, error: 'Missing ID or status' });
-    }
-
-    const item = await prisma.callQueue.findUnique({ where: { id } });
-    if (!item) {
-      return res.status(404).json({ ok: false, error: 'Queue item not found' });
-    }
-
-    const isFinished = ['issue_resolved', 'thanked', 'not_satisfied'].includes(callStatus);
-
-    const updated = await prisma.callQueue.update({
-      where: { id },
-      data: {
-        callStatus,
-        callNote: callNote || null,
-        followupDate: followupDate || null,
-        escalated: !!escalated,
-        callAttempts: { increment: 1 },
-        isDone: isFinished,
-        updatedAt: new Date()
-      }
-    });
-
-    if (isFinished) {
-      await prisma.feedback.update({
-        where: { id: item.feedbackId },
-        data: { status: 'closed', actionTaken: callNote || 'Issue addressed' }
-      });
-    } else {
-      await prisma.feedback.update({
-        where: { id: item.feedbackId },
-        data: { status: 'reviewed', actionTaken: callNote || 'Contacted guest' }
-      });
-    }
-
-    return res.json({ ok: true, queueItem: updated });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    await query(
+      `UPDATE CallQueue SET callStatus = ?, callNote = ?, isDone = ?, followupDate = ?,
+       callAttempts = callAttempts + 1 WHERE id = ?`,
+      [callStatus || null, callNote || null, isDone ? 1 : 0, followupDate || null, id]
+    );
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 9. Divert Management CRUD & timeline logs
+// 9. Get Diverts
 export const getDiverts = async (req: Request, res: Response) => {
   try {
-    const diverts = await prisma.divert.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: 'desc' },
-      include: { updates: true }
-    });
+    const { status, sectionId } = req.query;
+    let sql = 'SELECT * FROM Divert WHERE deleted_at IS NULL';
+    const params: any[] = [];
+    if (status) { sql += ' AND status = ?'; params.push(status); }
+    if (sectionId) { sql += ' AND sectionId = ?'; params.push(sectionId); }
+    sql += ' ORDER BY created_at DESC';
+    const diverts = await query(sql, params);
     return res.json({ ok: true, diverts });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-export const createDivert = async (req: AuthenticatedRequest, res: Response) => {
+// 10. Create Divert
+export const createDivert = async (req: Request, res: Response) => {
   try {
-    const { sectionId, sectionName, productWanted, qty, priceRange, fabricOccasion, reasonCode, detailedRemarks, comingBack, custName, custMobile, expectedDate } = req.body;
-    const userName = req.user?.name || 'CRM Staff';
-
-    if (!sectionId || !productWanted || !reasonCode || !comingBack) {
-      return res.status(400).json({ ok: false, error: 'Missing required parameters' });
-    }
+    const { date, sectionId, sectionName, productWanted, qty, priceRange, fabricOccasion,
+      reasonCode, detailedRemarks, comingBack, custName, custMobile, expectedDate, raisedBy } = req.body;
 
     const divertId = `DIV-${Date.now()}`;
-
-    const divert = await prisma.divert.create({
-      data: {
-        divertId,
-        date: formatDateString(new Date()),
-        sectionId,
-        sectionName,
-        productWanted,
-        qty: qty ? parseInt(qty, 10) : null,
-        priceRange: priceRange || null,
-        fabricOccasion: fabricOccasion || null,
-        reasonCode,
-        detailedRemarks: detailedRemarks || null,
-        comingBack,
-        custName: custName || null,
-        custMobile: custMobile || null,
-        expectedDate: expectedDate || null,
-        raisedBy: userName,
-        status: 'open'
-      }
-    });
-
-    return res.json({ ok: true, divert });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    await query(
+      `INSERT INTO Divert (divertId, date, sectionId, sectionName, productWanted, qty, priceRange,
+         fabricOccasion, reasonCode, detailedRemarks, comingBack, custName, custMobile,
+         expectedDate, raisedBy, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')`,
+      [divertId, date, sectionId, sectionName, productWanted, qty || null, priceRange || null,
+        fabricOccasion || null, reasonCode, detailedRemarks || null, comingBack,
+        custName || null, custMobile || null, expectedDate || null, raisedBy]
+    );
+    return res.json({ ok: true, divertId });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-export const updateDivert = async (req: AuthenticatedRequest, res: Response) => {
+// 11. Update Divert
+export const updateDivert = async (req: Request, res: Response) => {
   try {
-    const { id, status, pmAction, adminRemark, updateNote } = req.body;
-    const userId = req.user?.id;
-    const userName = req.user?.name || 'Staff';
-    const userRole = req.user?.role || 'crm_staff';
+    const { id, status, pmAction, adminRemark } = req.body;
+    if (!id) return res.status(400).json({ ok: false, error: 'Missing divert ID' });
 
-    if (!id || !userId) {
-      return res.status(400).json({ ok: false, error: 'Divert ID missing' });
-    }
-
-    const divert = await prisma.divert.findUnique({ where: { id } });
-    if (!divert) {
-      return res.status(404).json({ ok: false, error: 'Divert item not found' });
-    }
-
-    const updatedData: any = {};
-    if (status) updatedData.status = status;
-    if (pmAction) updatedData.pmAction = pmAction;
-    if (adminRemark) updatedData.adminRemark = adminRemark;
-    if (status === 'closed' || status === 'cannot_fulfill') {
-      updatedData.closedAt = new Date();
-    }
-
-    const updated = await prisma.divert.update({
-      where: { id },
-      data: updatedData
-    });
-
-    // Create log timeline entry
-    await prisma.divertUpdate.create({
-      data: {
-        divertId: id,
-        updatedBy: userName,
-        userId: userId,
-        role: userRole,
-        note: updateNote || `Updated status to ${status || divert.status}`,
-        newStatus: status || null
-      }
-    });
-
-    return res.json({ ok: true, divert: updated });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const closedAt = (status === 'closed' || status === 'cannot_fulfill') ? new Date() : null;
+    await query(
+      'UPDATE Divert SET status = ?, pmAction = ?, adminRemark = ?, closedAt = ? WHERE id = ?',
+      [status, pmAction || null, adminRemark || null, closedAt, id]
+    );
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 10. Divert reasons
+// 12. Get Divert Reasons
 export const getDivertReasons = async (req: Request, res: Response) => {
   try {
-    const reasons = await prisma.divertReason.findMany({
-      where: { deletedAt: null }
-    });
+    const reasons = await query('SELECT * FROM DivertReason WHERE deleted_at IS NULL ORDER BY reasonId');
     return res.json({ ok: true, reasons });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 11. Custom Settings profile Management
+// 13. Get Settings
 export const getSettings = async (req: Request, res: Response) => {
   try {
-    const settings = await prisma.settings.findFirst({
-      where: { deletedAt: null }
-    });
-    return res.json({ ok: true, settings });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const [settings] = await query('SELECT * FROM Settings WHERE deleted_at IS NULL LIMIT 1');
+    return res.json({ ok: true, settings: settings || null });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
+// 14. Update Settings
 export const updateSettings = async (req: Request, res: Response) => {
   try {
-    const { id, companyName, companyLogoUrl, operatingStart, operatingEnd, footfallGraceMin, footfallEditCutoff, derEmail, derWhatsappNote } = req.body;
+    const { companyName, companyLogoUrl, operatingStart, operatingEnd,
+      footfallGraceMin, footfallEditCutoff, derEmail } = req.body;
 
-    const settings = await prisma.settings.upsert({
-      where: { id: id || 1 },
-      update: {
-        companyName,
-        companyLogoUrl,
-        operatingStart,
-        operatingEnd,
-        footfallGraceMin: parseInt(footfallGraceMin, 10),
-        footfallEditCutoff,
-        derEmail,
-        derWhatsappNote
-      },
-      create: {
-        companyName,
-        companyLogoUrl,
-        operatingStart,
-        operatingEnd,
-        footfallGraceMin: parseInt(footfallGraceMin, 10),
-        footfallEditCutoff,
-        derEmail,
-        derWhatsappNote,
-        setupComplete: true
-      }
-    });
-
-    return res.json({ ok: true, settings });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const [existing] = await query('SELECT id FROM Settings WHERE deleted_at IS NULL LIMIT 1');
+    if (existing) {
+      await query(
+        `UPDATE Settings SET companyName=?, companyLogoUrl=?, operatingStart=?, operatingEnd=?,
+         footfallGraceMin=?, footfallEditCutoff=?, derEmail=? WHERE id=?`,
+        [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
+          footfallGraceMin, footfallEditCutoff, derEmail || null, existing.id]
+      );
+    } else {
+      await query(
+        `INSERT INTO Settings (companyName, companyLogoUrl, operatingStart, operatingEnd,
+           footfallGraceMin, footfallEditCutoff, derEmail, setupComplete)
+         VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
+        [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
+          footfallGraceMin, footfallEditCutoff, derEmail || null]
+      );
+    }
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 12. CRUD sections
+// 15. Get Sections
 export const getSections = async (req: Request, res: Response) => {
   try {
-    const list = await prisma.section.findMany({
-      where: { isActive: true, deletedAt: null }
-    });
-    return res.json({ ok: true, sections: list });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const sections = await query('SELECT * FROM Section WHERE deleted_at IS NULL ORDER BY sectionId');
+    return res.json({ ok: true, sections });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 13. Send Day End Report (DER) Email
+// 16. Create Section
+export const createSection = async (req: Request, res: Response) => {
+  try {
+    const { sectionId, sectionName, type, managerName, managerEmail } = req.body;
+    await query(
+      'INSERT INTO Section (sectionId, sectionName, type, managerName, managerEmail) VALUES (?, ?, ?, ?, ?)',
+      [sectionId, sectionName, type, managerName || null, managerEmail || null]
+    );
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+
+// 17. Delete Section
+export const deleteSection = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.body;
+    await query('UPDATE Section SET deleted_at = NOW() WHERE id = ?', [id]);
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+
+// 18. Send Day End Report Email
 export const sendDER = async (req: Request, res: Response) => {
   try {
-    const todayStr = req.body.date as string || formatDateString(new Date());
-
-    const settings = await prisma.settings.findFirst({ where: { deletedAt: null } });
+    const todayStr = formatDateString(new Date());
+    const [settings] = await query('SELECT * FROM Settings WHERE deleted_at IS NULL LIMIT 1');
     if (!settings || !settings.derEmail) {
       return res.status(400).json({ ok: false, error: 'DER Email target is not configured in settings.' });
     }
 
-    const footfalls = await prisma.footfallEntry.findMany({
-      where: { date: todayStr, deletedAt: null }
-    });
-
-    const summary = await prisma.dailySummary.findUnique({
-      where: { date: todayStr }
-    });
-
+    const footfalls = await query('SELECT count FROM FootfallEntry WHERE date = ? AND deleted_at IS NULL', [todayStr]);
+    const [summary] = await query('SELECT billsCount FROM DailySummary WHERE date = ? LIMIT 1', [todayStr]);
     const totalFootfall = footfalls.reduce((sum: number, item: any) => sum + item.count, 0);
     const totalBills = summary ? summary.billsCount : 0;
     const abv = totalBills > 0 ? Math.round(totalFootfall / totalBills) : 0;
 
-    // Send email using Nodemailer
     const transporter = nodemailer.createTransport({
-      host: 'smtp.mailtrap.io', // Placeholder or use process.env settings
+      host: 'smtp.mailtrap.io',
       port: 2525,
-      auth: {
-        user: process.env.EMAIL_USER || '',
-        pass: process.env.EMAIL_PASS || ''
-      }
+      auth: { user: process.env.EMAIL_USER || '', pass: process.env.EMAIL_PASS || '' }
     });
 
-    const mailOptions = {
+    await transporter.sendMail({
       from: '"BSC CRM System" <crm@store.com>',
       to: settings.derEmail,
       subject: `Day End CRM Summary - ${todayStr}`,
-      html: `
-        <h2>Store Performance Report - ${todayStr}</h2>
-        <p><strong>Total Visitors (Footfall):</strong> ${totalFootfall}</p>
-        <p><strong>Total Bills Count:</strong> ${totalBills}</p>
-        <p><strong>Average Bill Value (ABV):</strong> ₹${abv}</p>
-        <br/>
-        <p>Generated by BSC Textiles CRM.</p>
-      `
-    };
+      html: `<h2>Store Performance Report - ${todayStr}</h2>
+             <p><strong>Total Visitors:</strong> ${totalFootfall}</p>
+             <p><strong>Total Bills:</strong> ${totalBills}</p>
+             <p><strong>ABV:</strong> ₹${abv}</p>`
+    });
 
-    await transporter.sendMail(mailOptions);
-    return res.json({ ok: true, message: 'DER dispatched successfully to ' + settings.derEmail });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    return res.json({ ok: true, message: 'DER dispatched to ' + settings.derEmail });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 14. Fetch all active users
+// 19. Get Users
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    const users = await prisma.user.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: 'desc' }
-    });
-    return res.json({
-      ok: true,
-      users: users.map((u: any) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        sectionsAssigned: u.sectionsAssigned,
-        isActive: u.isActive
-      }))
-    });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+    const users = await query(
+      'SELECT id, name, email, role, sectionsAssigned, isActive FROM User WHERE deleted_at IS NULL ORDER BY created_at DESC'
+    );
+    return res.json({ ok: true, users });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 15. Create a new user with bcrypt password hashing
+// 20. Create User
 export const createUser = async (req: Request, res: Response) => {
   try {
     const { name, email, password, role, sectionsAssigned } = req.body;
     if (!name || !email || !password || !role) {
-      return res.status(400).json({ ok: false, error: 'Missing required parameters' });
+      return res.status(400).json({ ok: false, error: 'All user fields are required' });
     }
-
-    const exists = await prisma.user.findUnique({ where: { email } });
-    if (exists) {
-      return res.status(400).json({ ok: false, error: 'User email already exists' });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        sectionsAssigned: sectionsAssigned || 'ALL',
-        isActive: true
-      }
-    });
-
-    return res.json({
-      ok: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        sectionsAssigned: user.sectionsAssigned
-      }
-    });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
-};
-
-// 16. Create a store section
-export const createSection = async (req: Request, res: Response) => {
-  try {
-    const { sectionId, sectionName, type, managerName, managerEmail } = req.body;
-    if (!sectionId || !sectionName || !type) {
-      return res.status(400).json({ ok: false, error: 'Missing section parameters' });
-    }
-
-    const section = await prisma.section.upsert({
-      where: { sectionId },
-      update: {
-        sectionName,
-        type,
-        managerName: managerName || null,
-        managerEmail: managerEmail || null,
-        isActive: true,
-        deletedAt: null
-      },
-      create: {
-        sectionId,
-        sectionName,
-        type,
-        managerName: managerName || null,
-        managerEmail: managerEmail || null
-      }
-    });
-
-    return res.json({ ok: true, section });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
-};
-
-// 17. Delete a store section
-export const deleteSection = async (req: Request, res: Response) => {
-  try {
-    const { sectionId } = req.query;
-    if (!sectionId) {
-      return res.status(400).json({ ok: false, error: 'Missing section ID parameter' });
-    }
-
-    await prisma.section.update({
-      where: { sectionId: sectionId as string },
-      data: { deletedAt: new Date(), isActive: false }
-    });
-
+    await query(
+      'INSERT INTO User (name, email, password, role, sectionsAssigned, isActive) VALUES (?, ?, ?, ?, ?, TRUE)',
+      [name, email, hashedPassword, role, sectionsAssigned || 'ALL']
+    );
     return res.json({ ok: true });
-  } catch (err: any) {
-    return res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };

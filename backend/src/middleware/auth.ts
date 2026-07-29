@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import prisma from '../config/db';
+import { query } from '../config/db';
 
 export const JWT_SECRET = process.env.JWT_SECRET || "RetailCrmSuperSecureSecret123!";
 
@@ -25,11 +25,12 @@ export const authenticateJWT = async (req: AuthenticatedRequest, res: Response, 
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; email: string; role: string };
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
-    });
+    const [user] = await query(
+      'SELECT * FROM User WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+      [decoded.id]
+    );
 
-    if (!user || !user.isActive || user.deletedAt !== null) {
+    if (!user || !user.isActive) {
       return res.status(403).json({ ok: false, error: 'User is inactive or deleted' });
     }
 
@@ -54,7 +55,7 @@ export const authorizeRoles = (allowedRoles: string[]) => {
       return res.status(401).json({ ok: false, error: 'Unauthenticated user context' });
     }
     if (req.user.role === 'super_admin') {
-      return next(); // Super admin bypasses
+      return next(); // Super admin bypasses all role checks
     }
     if (allowedRoles.includes(req.user.role)) {
       return next();

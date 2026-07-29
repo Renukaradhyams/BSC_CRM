@@ -1,19 +1,14 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../config/db';
+import { query } from '../config/db';
 import { JWT_SECRET } from '../middleware/auth';
 
 // 1. Check Onboarding Status
 export const setupCheck = async (req: Request, res: Response) => {
   try {
-    const settings = await prisma.settings.findFirst({
-      where: { deletedAt: null }
-    });
-    const superAdmin = await prisma.user.findFirst({
-      where: { role: 'super_admin', deletedAt: null }
-    });
-
+    const [settings] = await query('SELECT id, setupComplete FROM Settings WHERE deleted_at IS NULL LIMIT 1');
+    const [superAdmin] = await query("SELECT id FROM User WHERE role = 'super_admin' AND deleted_at IS NULL LIMIT 1");
     const isComplete = !!(settings && settings.setupComplete && superAdmin);
     return res.json({ ok: true, setup_complete: isComplete });
   } catch (err: any) {
@@ -25,14 +20,10 @@ export const setupCheck = async (req: Request, res: Response) => {
 // 2. Perform Onboarding
 export const onboard = async (req: Request, res: Response) => {
   try {
-    const settingsCheck = await prisma.settings.findFirst({
-      where: { deletedAt: null }
-    });
-    const adminCheck = await prisma.user.findFirst({
-      where: { role: 'super_admin', deletedAt: null }
-    });
+    const [existingSettings] = await query('SELECT id, setupComplete FROM Settings WHERE deleted_at IS NULL LIMIT 1');
+    const [existingAdmin] = await query("SELECT id FROM User WHERE role = 'super_admin' AND deleted_at IS NULL LIMIT 1");
 
-    if (settingsCheck?.setupComplete && adminCheck) {
+    if (existingSettings?.setupComplete && existingAdmin) {
       return res.status(400).json({ ok: false, error: 'CRM setup is already complete' });
     }
 
@@ -41,63 +32,45 @@ export const onboard = async (req: Request, res: Response) => {
       return res.status(400).json({ ok: false, error: 'Missing company details or admin credentials' });
     }
 
-    // Delete any old settings and admin accounts
-    await prisma.$transaction([
-      prisma.settings.deleteMany(),
-      prisma.user.deleteMany({ where: { role: 'super_admin' } })
-    ]);
+    // Clear old settings and super_admin accounts
+    await query('DELETE FROM Settings');
+    await query("DELETE FROM User WHERE role = 'super_admin'");
 
     // Create Settings
-    await prisma.settings.create({
-      data: {
-        companyName: company.name,
-        companyLogoUrl: company.logo_url || null,
-        operatingStart: company.op_start || "10:00",
-        operatingEnd: company.op_end || "22:00",
-        footfallGraceMin: parseInt(company.grace_min, 10) || 30,
-        footfallEditCutoff: company.edit_cutoff || "10:30",
-        setupComplete: true
-      }
-    });
+    await query(
+      `INSERT INTO Settings (companyName, companyLogoUrl, operatingStart, operatingEnd, footfallGraceMin, footfallEditCutoff, setupComplete)
+       VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
+      [
+        company.name,
+        company.logo_url || null,
+        company.op_start || '10:00',
+        company.op_end || '22:00',
+        parseInt(company.grace_min, 10) || 30,
+        company.edit_cutoff || '10:30'
+      ]
+    );
 
     // Create Sections
     if (sections && Array.isArray(sections)) {
       for (let i = 0; i < sections.length; i++) {
         const sec = sections[i];
         const sectionId = `S${i + 1}`;
-        await prisma.section.upsert({
-          where: { sectionId },
-          update: {
-            sectionName: sec.name,
-            type: sec.type,
-            managerName: sec.manager_name || null,
-            managerEmail: sec.manager_email || null,
-            isActive: true,
-            deletedAt: null
-          },
-          create: {
-            sectionId,
-            sectionName: sec.name,
-            type: sec.type,
-            managerName: sec.manager_name || null,
-            managerEmail: sec.manager_email || null
-          }
-        });
+        await query(
+          `INSERT INTO Section (sectionId, sectionName, type, managerName, managerEmail)
+           VALUES (?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE sectionName = VALUES(sectionName), type = VALUES(type),
+             managerName = VALUES(managerName), managerEmail = VALUES(managerEmail), deleted_at = NULL`,
+          [sectionId, sec.name, sec.type, sec.manager_name || null, sec.manager_email || null]
+        );
       }
     }
 
     // Create Super Admin User
     const hashedPassword = await bcrypt.hash(admin_user.password, 10);
-    await prisma.user.create({
-      data: {
-        name: admin_user.name,
-        email: admin_user.email,
-        password: hashedPassword,
-        role: 'super_admin',
-        sectionsAssigned: 'ALL',
-        isActive: true
-      }
-    });
+    await query(
+      `INSERT INTO User (name, email, password, role, sectionsAssigned, isActive) VALUES (?, ?, ?, 'super_admin', 'ALL', TRUE)`,
+      [admin_user.name, admin_user.email, hashedPassword]
+    );
 
     return res.json({ ok: true, message: 'CRM onboarding completed successfully' });
   } catch (err: any) {
@@ -116,15 +89,10 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ ok: false, error: 'Username and password are required' });
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: identifier },
-          { name: identifier }
-        ],
-        deletedAt: null
-      }
-    });
+    const [user] = await query(
+      'SELECT * FROM User WHERE (email = ? OR name = ?) AND deleted_at IS NULL LIMIT 1',
+      [identifier, identifier]
+    );
 
     if (!user || !user.isActive) {
       return res.status(401).json({ ok: false, error: 'Invalid username or password' });
@@ -141,9 +109,7 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '12h' }
     );
 
-    const settings = await prisma.settings.findFirst({
-      where: { deletedAt: null }
-    });
+    const [settings] = await query('SELECT * FROM Settings WHERE deleted_at IS NULL LIMIT 1');
 
     return res.json({
       ok: true,
@@ -169,7 +135,7 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-// 4. Logout (audit log stub)
+// 4. Logout
 export const logout = async (req: Request, res: Response) => {
   return res.json({ ok: true, message: 'Logged out successfully' });
 };
@@ -179,11 +145,7 @@ export const cashLogin = async (req: Request, res: Response) => {
   try {
     const { pin } = req.body;
     if (pin === '1938') {
-      const cashToken = jwt.sign(
-        { scope: 'cash_settlement' },
-        JWT_SECRET,
-        { expiresIn: '2h' }
-      );
+      const cashToken = jwt.sign({ scope: 'cash_settlement' }, JWT_SECRET, { expiresIn: '2h' });
       return res.json({ ok: true, cashToken });
     }
     return res.status(401).json({ ok: false, error: 'Incorrect Cash Settlement PIN' });
@@ -202,23 +164,19 @@ export const vmLogin = async (req: Request, res: Response) => {
       return res.status(400).json({ ok: false, error: 'Name and PIN are required' });
     }
 
-    const vmUser = await prisma.vMUser.findFirst({
-      where: { name, deletedAt: null }
-    });
+    const [vmUser] = await query(
+      'SELECT * FROM VMUser WHERE name = ? AND deleted_at IS NULL LIMIT 1',
+      [name]
+    );
 
     if (!vmUser || !vmUser.isActive) {
       return res.status(401).json({ ok: false, error: 'VM User not found or inactive' });
     }
-
     if (vmUser.pin !== pin) {
       return res.status(401).json({ ok: false, error: 'Incorrect PIN' });
     }
 
-    return res.json({
-      ok: true,
-      name: vmUser.name,
-      role: vmUser.role
-    });
+    return res.json({ ok: true, name: vmUser.name, role: vmUser.role });
   } catch (err: any) {
     console.error('VM login error:', err);
     return res.status(500).json({ ok: false, error: 'VM Login failed: ' + err.message });
