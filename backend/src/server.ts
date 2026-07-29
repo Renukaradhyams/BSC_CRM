@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import { initDb } from './initDb';
 
 import authRoutes from './routes/auth';
 import crmRoutes from './routes/crm';
@@ -64,6 +65,15 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`TypeScript Server running on port ${PORT}`);
-});
+
+// Auto-initialize database tables then start the server
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`TypeScript Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Database initialization failed:', err);
+    process.exit(1);
+  });
