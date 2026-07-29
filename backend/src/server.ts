@@ -15,6 +15,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust reverse proxy header configurations (like Hostinger Cloudflare/Loadbalancers)
+app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : 1);
+
 // Security Middlewares
 app.use(helmet());
 app.use(cors());
