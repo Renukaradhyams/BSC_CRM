@@ -182,3 +182,59 @@ export const vmLogin = async (req: Request, res: Response) => {
     return res.status(500).json({ ok: false, error: 'VM Login failed: ' + err.message });
   }
 };
+
+// 7. Greeter Login verify name/PIN or select from list
+export const greeterLogin = async (req: Request, res: Response) => {
+  try {
+    const name = (req.body.name || req.query.name) as string;
+    const pin = (req.body.pin || req.query.pin) as string;
+
+    if (!name || !pin) {
+      return res.status(400).json({ ok: false, error: 'Greeter name and 4-digit PIN are required' });
+    }
+
+    const [user] = await query(
+      "SELECT * FROM User WHERE name = ? AND role = 'greeter' AND deleted_at IS NULL LIMIT 1",
+      [name]
+    );
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ ok: false, error: 'Greeter account not found or inactive' });
+    }
+
+    if (user.pin !== pin) {
+      return res.status(401).json({ ok: false, error: 'Invalid 4-digit PIN' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    const [settings] = await query('SELECT * FROM Settings WHERE deleted_at IS NULL LIMIT 1');
+
+    return res.json({
+      ok: true,
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        sectionsAssigned: user.sectionsAssigned
+      },
+      settings: settings ? {
+        companyName: settings.companyName,
+        companyLogoUrl: settings.companyLogoUrl,
+        operatingStart: settings.operatingStart,
+        operatingEnd: settings.operatingEnd,
+        graceMin: settings.footfallGraceMin,
+        editCutoff: settings.footfallEditCutoff
+      } : null
+    });
+  } catch (err: any) {
+    console.error('Greeter login error:', err);
+    return res.status(500).json({ ok: false, error: 'Greeter login failed: ' + err.message });
+  }
+};
+

@@ -19,6 +19,7 @@ import CashSettlement from './pages/CashSettlement';
 import VmChecklist from './pages/VmChecklist';
 import Admin from './pages/Admin';
 import TVDisplay from './pages/TVDisplay';
+import Greeter from './pages/Greeter';
 
 interface SetupGateProps {
   children: React.ReactNode;
@@ -85,12 +86,14 @@ function AppRoutes() {
           path="/login" 
           element={
             <SetupGate>
-              {user ? <Navigate to="/app" replace /> : <Login />}
+              {user ? (
+                user.role === 'greeter' ? <Navigate to="/app/greeter" replace /> : <Navigate to="/app" replace />
+              ) : <Login />}
             </SetupGate>
           } 
         />
 
-        {/* TV display dashboard - rendered full screen without AppLayout sidebar */}
+        {/* Fullscreen TV Display Route */}
         <Route 
           path="/app/tv" 
           element={
@@ -99,6 +102,17 @@ function AppRoutes() {
             </ProtectedRoute>
           } 
         />
+
+        {/* Fullscreen Greeter Tablet Desk Portal Route */}
+        <Route 
+          path="/app/greeter" 
+          element={
+            <ProtectedRoute>
+              <Greeter />
+            </ProtectedRoute>
+          } 
+        />
+
 
         {/* Standard Protected layout pages */}
         <Route 

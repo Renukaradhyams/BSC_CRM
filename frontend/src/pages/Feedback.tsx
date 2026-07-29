@@ -124,7 +124,7 @@ export default function Feedback() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '600px', margin: '0 auto' }} className="fade-in">
+    <div className="glass-card fade-in" style={{ padding: '24px', maxWidth: '600px', margin: '0 auto' }}>
       <header style={{ marginBottom: '24px' }}>
         <h1 className="serif" style={{ fontSize: '28px' }}>Customer Feedback</h1>
         <p style={{ fontSize: '14px', color: 'var(--ink-60)' }}>Record guest reviews and CSI ratings</p>

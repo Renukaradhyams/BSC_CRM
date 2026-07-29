@@ -173,7 +173,7 @@ export default function Onboarding() {
 
   return (
     <div className="page page-top fade-in">
-      <div className="card card-wide">
+      <div className="glass-card card-wide">
         {/* Brand Strip */}
         <div className="brand-strip">
           <div className="brand-icon">

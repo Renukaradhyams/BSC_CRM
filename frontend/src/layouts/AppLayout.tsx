@@ -11,10 +11,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout, settings } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
   const [timeStr, setTimeStr] = useState<string>('');
   const [alertsCount, setAlertsCount] = useState<number>(0);
+  const [collapsed, setCollapsed] = useState<boolean>(false);
 
-  // Live dynamic Clock (IST)
+  // Live IST Clock
   useEffect(() => {
     const updateTime = () => {
       const d = new Date();
@@ -28,7 +30,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch open alerts count
+  // Fetch divert alerts count
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
@@ -42,7 +44,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       }
     };
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 15000); // Poll every 15s
+    const interval = setInterval(fetchAlerts, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -51,7 +53,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navigate('/login');
   };
 
-  // Sidebar Role-Based menu visibility filter
+  // Role visibility filter
   const showMenu = (item: string): boolean => {
     if (!user) return false;
     const role = user.role;
@@ -76,83 +78,107 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'vm-checklist':
         return ['crm_manager', 'vm'].includes(role);
       case 'admin':
-        return false; // Only admin/super_admin
+        return false;
       default:
         return false;
     }
   };
 
   const navItems = [
-    { id: 'dashboard', path: '/app', label: '📊 Dashboard' },
-    { id: 'footfall', path: '/app/footfall', label: '🚶 Footfall Entry' },
-    { id: 'feedback-qr', path: '/app/feedback-qr', label: '📱 Feedback QR' },
-    { id: 'feedback-list', path: '/app/feedback-list', label: '📞 Feedback Queue' },
-    { id: 'divert', path: '/app/divert', label: '📦 Divert Register' },
-    { id: 'pm-view', path: '/app/pm-view', label: '👔 Purchase Manager' },
-    { id: 'reports', path: '/app/reports', label: '📈 Reports' },
-    { id: 'cash-settlement', path: '/app/cash-settlement', label: '💰 Cash Settlement' },
-    { id: 'vm-checklist', path: '/app/vm-checklist', label: '🏢 VM Checklist' },
-    { id: 'admin', path: '/app/admin', label: '⚙️ Admin Settings' },
-    { id: 'tv', path: '/app/tv', label: '📺 Live TV Display' }
+    { id: 'dashboard', path: '/app', label: 'Dashboard', icon: '📊' },
+    { id: 'footfall', path: '/app/footfall', label: 'Footfall Entry', icon: '🚶' },
+    { id: 'feedback-qr', path: '/app/feedback-qr', label: 'Feedback QR', icon: '📱' },
+    { id: 'feedback-list', path: '/app/feedback-list', label: 'Call Queue / Feedback', icon: '📞' },
+    { id: 'divert', path: '/app/divert', label: 'Sourcing Diverts', icon: '📦' },
+    { id: 'pm-view', path: '/app/pm-view', label: 'Purchase Manager', icon: '👔' },
+    { id: 'reports', path: '/app/reports', label: 'Reports & Analytics', icon: '📈' },
+    { id: 'cash-settlement', path: '/app/cash-settlement', label: 'Cash Settlement', icon: '💰' },
+    { id: 'vm-checklist', path: '/app/vm-checklist', label: 'VM Checklist', icon: '🏢' },
+    { id: 'admin', path: '/app/admin', label: 'Admin Settings', icon: '⚙️' },
+    { id: 'tv', path: '/app/tv', label: 'Live TV Display', icon: '📺' }
   ];
 
+  const getPageTitle = () => {
+    const current = navItems.find(i => i.path === location.pathname);
+    return current ? current.label : 'CRM Workspace';
+  };
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--ivory)' }}>
-      {/* Sidebar Layout container */}
-      <aside style={{
-        width: '260px',
-        background: 'var(--navy)',
-        color: '#fff',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0
-      }}>
-        {/* Company Header */}
-        <div style={{
-          padding: '24px 20px',
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-dark)' }}>
+      {/* Sidebar Navigation Panel */}
+      <aside
+        style={{
+          width: collapsed ? '80px' : '260px',
+          background: '#0E1220',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
           display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)'
-        }}>
-          <div style={{
-            width: '38px',
-            height: '38px',
-            background: '#fff',
-            borderRadius: '8px',
-            overflow: 'hidden',
+          flexDirection: 'column',
+          flexShrink: 0,
+          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 20
+        }}
+      >
+        {/* Company Header */}
+        <div
+          style={{
+            padding: '24px 20px',
             display: 'flex',
             alignItems: 'center',
-            justify: 'center'
-          }}>
-            <img 
-              src={settings?.companyLogoUrl || 'https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg'} 
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              alt="BSC"
-            />
+            justifyContent: collapsed ? 'center' : 'space-between',
+            borderBottom: '1px solid rgba(255,255,255,0.06)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                background: '#FFFFFF',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                padding: '2px',
+                flexShrink: 0
+              }}
+            >
+              <img
+                src={settings?.companyLogoUrl || 'https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg'}
+                alt="BSC"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
+              />
+            </div>
+            {!collapsed && (
+              <div>
+                <h2 className="outfit" style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1 }}>
+                  {settings?.companyName || 'BSC Textiles'}
+                </h2>
+                <span style={{ fontSize: '10px', color: 'var(--text-gold)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                  Retail CRM
+                </span>
+              </div>
+            )}
           </div>
-          <div>
-            <h2 style={{ fontSize: '15px', fontWeight: 'bold', fontFamily: "'DM Serif Display', serif", lineHeight: 1.1 }}>
-              {settings?.companyName || 'BSC Textiles'}
-            </h2>
-            <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              CRM Workspace
-            </span>
-          </div>
+
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--text-muted)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            {collapsed ? '❯' : '❮'}
+          </button>
         </div>
 
-        {/* Dynamic Clock & User context indicators */}
-        <div style={{ padding: '16px 20px', background: 'rgba(0,0,0,0.15)', fontSize: '13px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>
-            <span>🕒 IST Clock:</span>
-            <span style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{timeStr}</span>
-          </div>
-          <div style={{ color: 'var(--gold-l)', fontSize: '11px', textTransform: 'capitalize' }}>
-            👤 Logged as: {user?.name} ({user?.role.replace('_', ' ')})
-          </div>
-        </div>
-
-        {/* Menu Navigation */}
+        {/* Sidebar Nav Items */}
         <nav style={{ flex: 1, padding: '16px 10px', overflowY: 'auto' }}>
           {navItems.map(item => {
             if (!showMenu(item.id)) return null;
@@ -161,61 +187,164 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <div
                 key={item.id}
                 onClick={() => navigate(item.path)}
+                title={collapsed ? item.label : undefined}
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '8px',
+                  padding: collapsed ? '12px 0' : '12px 14px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  marginBottom: '6px',
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  color: active ? 'var(--gold-l)' : 'rgba(255,255,255,0.85)',
+                  fontSize: '13px',
+                  fontWeight: active ? 600 : 500,
+                  marginBottom: '4px',
+                  background: active ? 'linear-gradient(90deg, rgba(245,200,66,0.15) 0%, rgba(245,200,66,0.02) 100%)' : 'transparent',
+                  color: active ? 'var(--gold)' : 'var(--text-muted)',
+                  borderLeft: active ? '3px solid var(--gold)' : '3px solid transparent',
                   display: 'flex',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  transition: 'background 0.15s'
+                  justifyContent: collapsed ? 'center' : 'space-between',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <span>{item.label}</span>
-                {item.id === 'divert' && alertsCount > 0 && (
-                  <span style={{
-                    background: 'var(--crimson)',
-                    color: '#fff',
-                    fontSize: '10px',
-                    fontWeight: 'bold',
-                    padding: '2px 6px',
-                    borderRadius: '10px'
-                  }}>{alertsCount}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '16px', flexShrink: 0 }}>{item.icon}</span>
+                  {!collapsed && <span>{item.label}</span>}
+                </div>
+
+                {!collapsed && item.id === 'divert' && alertsCount > 0 && (
+                  <span
+                    style={{
+                      background: 'var(--crimson)',
+                      color: '#FFFFFF',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    {alertsCount}
+                  </span>
                 )}
               </div>
             );
           })}
         </nav>
 
-        {/* Footer Logout Button */}
-        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <button 
+        {/* User Info & Logout Panel */}
+        <div style={{ padding: '16px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.15)' }}>
+          {!collapsed && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>{user?.name}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-gold)', textTransform: 'capitalize' }}>
+                {user?.role.replace('_', ' ')}
+              </div>
+            </div>
+          )}
+
+          <button
             onClick={handleLogout}
             style={{
               width: '100%',
-              padding: '10px',
+              padding: collapsed ? '10px 0' : '10px',
               borderRadius: '8px',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: '#fff',
-              fontSize: '13px',
+              background: 'rgba(244, 63, 94, 0.1)',
+              border: '1px solid rgba(244, 63, 94, 0.25)',
+              color: '#FF6B81',
+              fontSize: '12px',
               fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
               cursor: 'pointer'
             }}
           >
-            🚪 Logout Session
+            <span>🚪</span>
+            {!collapsed && <span>Sign Out</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main Workspace content viewport container */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
-        {children}
-      </main>
+      {/* Main Content Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        {/* Topbar Header */}
+        <header
+          style={{
+            height: '64px',
+            background: 'rgba(15, 19, 35, 0.8)',
+            backdropFilter: 'blur(16px)',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            padding: '0 32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+            zIndex: 10
+          }}
+        >
+          {/* Breadcrumb Title */}
+          <div>
+            <h1 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF' }}>
+              {getPageTitle()}
+            </h1>
+          </div>
+
+          {/* Right Header Status Widgets */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* Live IST Clock */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255,255,255,0.04)',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: '1px solid rgba(255,255,255,0.08)'
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#10B981',
+                  boxShadow: '0 0 10px #10B981'
+                }}
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                IST
+              </span>
+              <span className="mono" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>
+                {timeStr}
+              </span>
+            </div>
+
+            {/* Profile Avatar Pill */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #F5C842 0%, #D9A514 100%)',
+                  color: '#0B0E19',
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Viewport Body Content */}
+        <main style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-dark)' }}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

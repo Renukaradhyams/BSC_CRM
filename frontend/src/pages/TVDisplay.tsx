@@ -108,7 +108,7 @@ export default function TVDisplay() {
         color: '#fff',
         padding: '24px'
       }} className="fade-in">
-        <form onSubmit={handlePinSubmit} className="card" style={{ padding: '32px', maxWidth: '360px', border: 'none', background: '#11192e', textAlign: 'center' }}>
+        <form onSubmit={handlePinSubmit} className="glass-card" style={{ padding: '32px', maxWidth: '360px', border: '1px solid var(--border)', textAlign: 'center' }}>
           <h2 className="serif" style={{ fontSize: '24px', color: '#fff', marginBottom: '8px' }}>TV Display Auth</h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>
             Enter the store TV board PIN to unlock the live scoreboard

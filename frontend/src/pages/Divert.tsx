@@ -190,7 +190,7 @@ export default function Divert() {
   };
 
   return (
-    <div style={{ padding: '24px' }} className="fade-in">
+    <div className="glass-card fade-in" style={{ padding: '24px' }}>
       <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="serif" style={{ fontSize: '28px' }}>Divert Register</h1>

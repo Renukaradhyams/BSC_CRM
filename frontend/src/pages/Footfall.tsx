@@ -157,7 +157,7 @@ export default function Footfall() {
   };
 
   return (
-    <div style={{ padding: '24px' }} className="fade-in">
+    <div className="glass-card fade-in" style={{ padding: '24px' }}>
       <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="serif" style={{ fontSize: '28px' }}>Footfall Register</h1>
@@ -186,7 +186,7 @@ export default function Footfall() {
       {success && <div className="alert alert-success" style={{ display: 'block' }}>{success}</div>}
 
       {/* Slots grid inputs */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+      <section className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
         {slots.map((s, idx) => {
           const isLocked = isSlotLocked(s);
           return (
@@ -262,7 +262,7 @@ export default function Footfall() {
       </section>
 
       {/* Bill Entries bottom card */}
-      <section className="card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
+      <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
         <h3 className="serif" style={{ fontSize: '18px', marginBottom: '8px' }}>Day-End Billing Summary</h3>
         <p style={{ fontSize: '13px', color: 'var(--ink-60)', marginBottom: '16px' }}>
           Enter the total bills generated for this operational day.
@@ -283,7 +283,7 @@ export default function Footfall() {
           <button
             onClick={handleBillsSave}
             disabled={savingBills}
-            className="btn btn-primary"
+            className="btn btn-teal btn-primary"
           >
             {savingBills ? 'Updating...' : '💾 Save Daily Bills'}
           </button>

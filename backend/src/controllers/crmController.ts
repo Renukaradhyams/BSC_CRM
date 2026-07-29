@@ -338,11 +338,11 @@ export const sendDER = async (req: Request, res: Response) => {
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// 19. Get Users
+// 19. Get Users (Includes PIN and plainPassword for Admin Vault)
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const users = await query(
-      'SELECT id, name, email, role, sectionsAssigned, isActive FROM User WHERE deleted_at IS NULL ORDER BY created_at DESC'
+      'SELECT id, name, email, role, sectionsAssigned, pin, plainPassword, isActive FROM User WHERE deleted_at IS NULL ORDER BY created_at DESC'
     );
     return res.json({ ok: true, users });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
@@ -351,15 +351,47 @@ export const getUsers = async (req: Request, res: Response) => {
 // 20. Create User
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role, sectionsAssigned } = req.body;
+    const { name, email, password, role, sectionsAssigned, pin } = req.body;
     if (!name || !email || !password || !role) {
       return res.status(400).json({ ok: false, error: 'All user fields are required' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+    const userPin = pin || (role === 'greeter' ? password : null);
     await query(
-      'INSERT INTO User (name, email, password, role, sectionsAssigned, isActive) VALUES (?, ?, ?, ?, ?, TRUE)',
-      [name, email, hashedPassword, role, sectionsAssigned || 'ALL']
+      'INSERT INTO User (name, email, password, role, sectionsAssigned, pin, plainPassword, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)',
+      [name, email, hashedPassword, role, sectionsAssigned || 'ALL', userPin, password]
     );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
+
+// 21. Reset User Password / PIN
+export const resetUserPassword = async (req: Request, res: Response) => {
+  try {
+    const { id, newPassword, newPin } = req.body;
+    if (!id || (!newPassword && !newPin)) {
+      return res.status(400).json({ ok: false, error: 'User ID and new password/PIN are required' });
+    }
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await query(
+        'UPDATE User SET password = ?, plainPassword = ?, pin = COALESCE(?, pin) WHERE id = ?',
+        [hashedPassword, newPassword, newPin || null, id]
+      );
+    } else if (newPin) {
+      await query('UPDATE User SET pin = ? WHERE id = ?', [newPin, id]);
+    }
+    return res.json({ ok: true });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+
+// 22. Get Greeters List (for Greeter Login Dropdown)
+export const getGreeters = async (req: Request, res: Response) => {
+  try {
+    const greeters = await query(
+      "SELECT id, name FROM User WHERE role = 'greeter' AND isActive = TRUE AND deleted_at IS NULL ORDER BY name ASC"
+    );
+    return res.json({ ok: true, greeters });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+

@@ -1,5 +1,5 @@
 import express from 'express';
-import { setupCheck, onboard, login, logout, cashLogin, vmLogin } from '../controllers/authController';
+import { setupCheck, onboard, login, logout, cashLogin, vmLogin, greeterLogin } from '../controllers/authController';
 
 const router = express.Router();
 
@@ -11,5 +11,7 @@ router.post('/logout', logout);
 router.post('/cash-login', cashLogin);
 router.get('/vm-login', vmLogin);
 router.post('/vm-login', vmLogin);
+router.post('/greeter-login', greeterLogin);
 
 export default router;
+

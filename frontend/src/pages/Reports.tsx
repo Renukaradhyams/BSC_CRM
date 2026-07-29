@@ -52,7 +52,7 @@ export default function Reports() {
   };
 
   return (
-    <div style={{ padding: '24px' }} className="fade-in">
+    <div className="glass-card fade-in" style={{ padding: '24px' }}>
       <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="serif" style={{ fontSize: '28px' }}>Store Analytics</h1>
@@ -72,7 +72,7 @@ export default function Reports() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
           {/* Sourcing Summary grid */}
-          <section className="card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
+          <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
             <h3 className="serif" style={{ fontSize: '18px', marginBottom: '16px' }}>Sourcing & Sells Registry</h3>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>

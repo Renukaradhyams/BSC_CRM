@@ -25,13 +25,20 @@ export async function initDb() {
     \`name\` VARCHAR(255) NOT NULL,
     \`email\` VARCHAR(255) UNIQUE NOT NULL,
     \`password\` VARCHAR(255) NOT NULL,
-    \`role\` ENUM('super_admin','admin','crm_manager','crm_staff','purchase_manager','telecaller','vm','pm','hr') NOT NULL,
+    \`role\` ENUM('super_admin','admin','crm_manager','crm_staff','purchase_manager','telecaller','vm','pm','hr','greeter') NOT NULL,
     \`sectionsAssigned\` VARCHAR(255) DEFAULT 'ALL',
+    \`pin\` VARCHAR(10) NULL,
+    \`plainPassword\` VARCHAR(255) NULL,
     \`isActive\` BOOLEAN DEFAULT TRUE,
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     \`deleted_at\` TIMESTAMP NULL
   )`);
+
+  // Add new columns to existing User table if they don't exist yet (safe migration)
+  try { await query("ALTER TABLE `User` ADD COLUMN `pin` VARCHAR(10) NULL"); } catch (_) {}
+  try { await query("ALTER TABLE `User` ADD COLUMN `plainPassword` VARCHAR(255) NULL"); } catch (_) {}
+  try { await query("ALTER TABLE `User` MODIFY COLUMN `role` ENUM('super_admin','admin','crm_manager','crm_staff','purchase_manager','telecaller','vm','pm','hr','greeter') NOT NULL"); } catch (_) {}
 
   await query(`CREATE TABLE IF NOT EXISTS \`Section\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,
@@ -283,25 +290,36 @@ async function seedIfEmpty() {
     ]
   );
 
-  // ── 2. Super Admin User ──────────────────────────────────────────────────
-  //    Login:  admin@store.com  /  password123
+  // ── 2. Super Admin User (Login: admin@store.com / password123) ──────────
   const adminHash = await bcrypt.hash('password123', 10);
   await query(
-    `INSERT INTO User (name, email, password, role, sectionsAssigned, isActive)
-     VALUES (?, ?, ?, 'super_admin', 'ALL', TRUE)`,
-    ['Admin Manager', 'admin@store.com', adminHash]
+    `INSERT INTO User (name, email, password, role, sectionsAssigned, plainPassword, isActive)
+     VALUES (?, ?, ?, 'super_admin', 'ALL', ?, TRUE)`,
+    ['Admin Manager', 'admin@store.com', adminHash, 'password123']
   );
 
   // ── 3. Extra Staff Users ─────────────────────────────────────────────────
   const crmHash  = await bcrypt.hash('crm123', 10);
-  const cashHash = await bcrypt.hash('cash123', 10);
+  const teleHash = await bcrypt.hash('tele123', 10);
   await query(
-    `INSERT INTO User (name, email, password, role, sectionsAssigned, isActive) VALUES
-       (?, ?, ?, 'crm_manager', 'ALL', TRUE),
-       (?, ?, ?, 'telecaller',  'ALL', TRUE)`,
+    `INSERT INTO User (name, email, password, role, sectionsAssigned, plainPassword, isActive) VALUES
+       (?, ?, ?, 'crm_manager', 'ALL', ?, TRUE),
+       (?, ?, ?, 'telecaller',  'ALL', ?, TRUE)`,
     [
-      'CRM Manager', 'crm@store.com',  crmHash,
-      'Telecaller1',  'tele@store.com', cashHash
+      'CRM Manager', 'crm@store.com',  crmHash,  'crm123',
+      'Telecaller1', 'tele@store.com', teleHash, 'tele123'
+    ]
+  );
+
+  // ── 3b. Greeter Users (PIN-based login) ─────────────────────────────────
+  const greeterHash = await bcrypt.hash('1234', 10);
+  await query(
+    `INSERT INTO User (name, email, password, role, sectionsAssigned, pin, plainPassword, isActive) VALUES
+       (?, ?, ?, 'greeter', 'ALL', ?, ?, TRUE),
+       (?, ?, ?, 'greeter', 'ALL', ?, ?, TRUE)`,
+    [
+      'Greeter1', 'greeter1@store.com', greeterHash, '1234', '1234',
+      'Greeter2', 'greeter2@store.com', greeterHash, '5678', '5678'
     ]
   );
 

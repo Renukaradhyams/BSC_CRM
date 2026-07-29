@@ -192,14 +192,14 @@ export default function CashForm() {
   };
 
   return (
-    <div style={{ padding: '24px' }} className="fade-in">
+    <div className="glass-card fade-in" style={{ padding: '24px' }}>
       <header style={{ marginBottom: '24px' }}>
         <h1 className="serif" style={{ fontSize: '28px' }}>Cash Settlement</h1>
         <p style={{ fontSize: '14px', color: 'var(--ink-60)' }}>Record cashier summaries and denomination tallies</p>
       </header>
 
       {/* Date and sale summary cards */}
-      <section className="card" style={{ padding: '20px', border: '1.5px solid var(--border)', marginBottom: '20px' }}>
+      <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)', marginBottom: '20px' }}>
         <h3 className="serif" style={{ fontSize: '18px', marginBottom: '14px' }}>Today's Sales Summary</h3>
         
         <div className="field-row">
@@ -228,7 +228,7 @@ export default function CashForm() {
       </section>
 
       {/* Collection totals cards */}
-      <section className="card" style={{ padding: '20px', border: '1.5px solid var(--border)', marginBottom: '20px' }}>
+      <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)', marginBottom: '20px' }}>
         <h3 className="serif" style={{ fontSize: '18px', marginBottom: '14px' }}>Collection Totals</h3>
         
         <div className="field-row">
@@ -249,7 +249,7 @@ export default function CashForm() {
       </section>
 
       {/* Cashier counter reports grid table */}
-      <section className="card" style={{ padding: '20px', border: '1.5px solid var(--border)', marginBottom: '24px' }}>
+      <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)', marginBottom: '24px' }}>
         <h3 className="serif" style={{ fontSize: '18px', marginBottom: '14px' }}>Cashier Counter reports</h3>
 
         <div style={{ overflowX: 'auto' }}>

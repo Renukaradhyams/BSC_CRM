@@ -1,5 +1,5 @@
 import express from 'express';
-import { getDashboard, getFootfall, saveFootfall, saveDailyBills, getFeedbackQuestions, saveFeedback, getCallQueue, updateCallStatus, getDiverts, createDivert, updateDivert, getDivertReasons, sendDER, getSettings, updateSettings, getSections, getUsers, createUser, createSection, deleteSection } from '../controllers/crmController';
+import { getDashboard, getFootfall, saveFootfall, saveDailyBills, getFeedbackQuestions, saveFeedback, getCallQueue, updateCallStatus, getDiverts, createDivert, updateDivert, getDivertReasons, sendDER, getSettings, updateSettings, getSections, getUsers, createUser, createSection, deleteSection, resetUserPassword, getGreeters } from '../controllers/crmController';
 import { authenticateJWT, authorizeRoles, authenticateTV } from '../middleware/auth';
 
 const router = express.Router();
@@ -38,8 +38,11 @@ router.delete('/sections', authenticateJWT, authorizeRoles(['super_admin', 'admi
 // User Accounts CRUD
 router.get('/users', authenticateJWT, authorizeRoles(['super_admin', 'admin']), getUsers);
 router.post('/users', authenticateJWT, authorizeRoles(['super_admin', 'admin']), createUser);
+router.put('/users/reset-password', authenticateJWT, authorizeRoles(['super_admin', 'admin']), resetUserPassword);
+router.get('/greeters', getGreeters); // Public list for greeter login selection
 
 // Send Email DER triggers
 router.post('/der', authenticateJWT, sendDER);
 
 export default router;
+
