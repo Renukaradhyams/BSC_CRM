@@ -244,18 +244,47 @@ export default function TVDisplay() {
           marginTop: '20px',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px'
+          gap: '12px',
+          overflow: 'hidden',
+          position: 'relative'
         }}>
-          <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', background: '#050a14', color: 'var(--gold-l)', padding: '4px 10px', borderRadius: '4px', flexShrink: 0 }}>
+          <style>{`
+            @keyframes marqueeScroll {
+              0% { transform: translate3d(0, 0, 0); }
+              100% { transform: translate3d(-50%, 0, 0); }
+            }
+          `}</style>
+          
+          <span style={{ 
+            fontWeight: 'bold', 
+            fontSize: '11px', 
+            textTransform: 'uppercase', 
+            background: '#050a14', 
+            color: 'var(--gold-l)', 
+            padding: '4px 10px', 
+            borderRadius: '4px', 
+            flexShrink: 0,
+            zIndex: 10
+          }}>
             🌟 CUSTOMER FEEDBACK
           </span>
-          <marquee behavior="scroll" direction="left" scrollamount="4" style={{ fontSize: '14px', fontWeight: 600, fontStyle: 'italic' }}>
-            {reviews.map((r, i) => (
+
+          <div style={{
+            display: 'flex',
+            whiteSpace: 'nowrap',
+            animation: 'marqueeScroll 35s linear infinite',
+            fontSize: '14px', 
+            fontWeight: 600, 
+            fontStyle: 'italic',
+            width: 'max-content'
+          }}>
+            {/* Render reviews twice to loop seamlessly */}
+            {[...reviews, ...reviews].map((r, i) => (
               <span key={i} style={{ marginRight: '40px' }}>
                 " {r.text} " — {r.name} ({r.area})
               </span>
             ))}
-          </marquee>
+          </div>
         </footer>
       )}
     </div>
