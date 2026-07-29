@@ -109,8 +109,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <aside
         style={{
           width: collapsed ? '80px' : '260px',
-          background: '#0E1220',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
+          background: '#0F172A',
+          borderRight: '1px solid #1E293B',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
@@ -125,7 +125,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.06)'
+            borderBottom: '1px solid rgba(255,255,255,0.08)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -139,7 +139,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 padding: '2px',
                 flexShrink: 0
               }}
@@ -155,7 +155,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <h2 className="outfit" style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1 }}>
                   {settings?.companyName || 'BSC Textiles'}
                 </h2>
-                <span style={{ fontSize: '10px', color: 'var(--text-gold)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                <span style={{ fontSize: '10px', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
                   Retail CRM
                 </span>
               </div>
@@ -165,9 +165,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <button
             onClick={() => setCollapsed(!collapsed)}
             style={{
-              background: 'rgba(255,255,255,0.05)',
-              color: 'var(--text-muted)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.08)',
+              color: '#94A3B8',
+              border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '6px',
               padding: '4px 8px',
               fontSize: '12px',
@@ -195,9 +195,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   fontSize: '13px',
                   fontWeight: active ? 600 : 500,
                   marginBottom: '4px',
-                  background: active ? 'linear-gradient(90deg, rgba(245,200,66,0.15) 0%, rgba(245,200,66,0.02) 100%)' : 'transparent',
-                  color: active ? 'var(--gold)' : 'var(--text-muted)',
-                  borderLeft: active ? '3px solid var(--gold)' : '3px solid transparent',
+                  background: active ? 'linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%)' : 'transparent',
+                  color: active ? '#FFFFFF' : '#94A3B8',
+                  boxShadow: active ? '0 4px 12px rgba(37, 99, 235, 0.3)' : 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: collapsed ? 'center' : 'space-between',
@@ -212,7 +212,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 {!collapsed && item.id === 'divert' && alertsCount > 0 && (
                   <span
                     style={{
-                      background: 'var(--crimson)',
+                      background: '#DC2626',
                       color: '#FFFFFF',
                       fontSize: '10px',
                       fontWeight: 700,
@@ -229,11 +229,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
 
         {/* User Info & Logout Panel */}
-        <div style={{ padding: '16px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.15)' }}>
+        <div style={{ padding: '16px 14px', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
           {!collapsed && (
             <div style={{ marginBottom: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>{user?.name}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-gold)', textTransform: 'capitalize' }}>
+              <div style={{ fontSize: '11px', color: '#60A5FA', textTransform: 'capitalize' }}>
                 {user?.role.replace('_', ' ')}
               </div>
             </div>
@@ -245,9 +245,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
               width: '100%',
               padding: collapsed ? '10px 0' : '10px',
               borderRadius: '8px',
-              background: 'rgba(244, 63, 94, 0.1)',
-              border: '1px solid rgba(244, 63, 94, 0.25)',
-              color: '#FF6B81',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#FCA5A5',
               fontSize: '12px',
               fontWeight: 600,
               display: 'flex',
@@ -269,20 +269,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <header
           style={{
             height: '64px',
-            background: 'rgba(15, 19, 35, 0.8)',
-            backdropFilter: 'blur(16px)',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            background: '#FFFFFF',
+            borderBottom: '1px solid #E2E8F0',
             padding: '0 32px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexShrink: 0,
-            zIndex: 10
+            zIndex: 10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
           }}
         >
           {/* Breadcrumb Title */}
           <div>
-            <h1 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF' }}>
+            <h1 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
               {getPageTitle()}
             </h1>
           </div>
@@ -295,9 +295,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'rgba(255,255,255,0.04)',
+                background: '#F1F5F9',
+                border: '1px solid #E2E8F0',
                 padding: '6px 14px',
                 borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#475569'
+              }}
+            >
+              <span style={{ color: '#2563EB' }}>⏰</span> IST {timeStr || '10:00:00'}
+            </div>
                 border: '1px solid rgba(255,255,255,0.08)'
               }}
             >

@@ -96,8 +96,8 @@ export default function Dashboard() {
       <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '180px' }}>
         <defs>
           <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F5C842" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#F5C842" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#2563EB" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
           </linearGradient>
         </defs>
 
@@ -105,7 +105,7 @@ export default function Dashboard() {
         {Array.from({ length: 4 }).map((_, i) => {
           const y = padding + (i * (height - 2 * padding)) / 3;
           return (
-            <line key={i} x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            <line key={i} x1={padding} y1={y} x2={width - padding} y2={y} stroke="#E2E8F0" strokeWidth="1" />
           );
         })}
 
@@ -117,25 +117,24 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Glowing stroke line */}
+        {/* Stroke line */}
         {pathD && (
           <path
             d={pathD}
             fill="none"
-            stroke="var(--gold)"
+            stroke="#2563EB"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ filter: 'drop-shadow(0 0 6px rgba(245,200,66,0.6))' }}
           />
         )}
 
         {/* Data points */}
         {points.map((p, i) => (
           <g key={i}>
-            <circle cx={p.x} cy={p.y} r="5" fill="#0B0E19" stroke="var(--gold)" strokeWidth="2.5" />
+            <circle cx={p.x} cy={p.y} r="5" fill="#FFFFFF" stroke="#2563EB" strokeWidth="2.5" />
             {slots[i].count > 0 && (
-              <text x={p.x} y={p.y - 9} fontSize="10" fill="var(--gold)" textAnchor="middle" fontWeight="bold">
+              <text x={p.x} y={p.y - 9} fontSize="10" fill="#1D4ED8" textAnchor="middle" fontWeight="bold">
                 {slots[i].count}
               </text>
             )}
@@ -158,10 +157,10 @@ export default function Dashboard() {
       {/* Top Banner Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="outfit" style={{ fontSize: '26px', fontWeight: 800, color: '#FFFFFF' }}>
+          <h1 className="outfit" style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A' }}>
             Store Intelligence Command Center
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <p style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
             Real-time hourly footfalls, customer satisfaction, and sourcing inventory metrics
           </p>
         </div>
@@ -190,81 +189,81 @@ export default function Dashboard() {
         }}
       >
         {/* Footfall */}
-        <div className="glass-card glow-blue" style={{ padding: '20px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #2563EB' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               🚶 Today Footfall
             </span>
-            <span className="badge badge-blue">Real-time</span>
+            <span className="badge badge-gold">Real-time</span>
           </div>
-          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: '#FFFFFF' }}>
+          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: '#0F172A' }}>
             {metrics.totalFootfall.toLocaleString()}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#475569', marginTop: '6px' }}>
             Visitors logged today
           </div>
         </div>
 
         {/* Bills */}
-        <div className="glass-card" style={{ padding: '20px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #0D9488' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               🧾 Total Bills
             </span>
-            <span className="badge badge-gold">Sales</span>
+            <span className="badge badge-green">Sales</span>
           </div>
-          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: 'var(--gold)' }}>
+          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: '#0D9488' }}>
             {metrics.totalBills.toLocaleString()}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#475569', marginTop: '6px' }}>
             Completed counter transactions
           </div>
         </div>
 
         {/* Diverts */}
-        <div className="glass-card" style={{ padding: '20px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #DC2626' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               ⚠️ Open Diverts
             </span>
-            <span className="badge badge-red">Sourcing</span>
+            <span className="badge badge-crimson">Sourcing</span>
           </div>
-          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: 'var(--crimson)' }}>
+          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: '#DC2626' }}>
             {metrics.openDiverts}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#475569', marginTop: '6px' }}>
             Unfulfilled item requests
           </div>
         </div>
 
         {/* NPS */}
-        <div className="glass-card glow-teal" style={{ padding: '20px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #16A34A' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               💬 Net Promoter (NPS)
             </span>
             <span className="badge badge-green">Satisfaction</span>
           </div>
-          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: 'var(--green)' }}>
+          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: '#16A34A' }}>
             {metrics.nps > 0 ? `+${metrics.nps}` : `${metrics.nps}`}%
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#475569', marginTop: '6px' }}>
             {metrics.feedbacksCollected} customer responses
           </div>
         </div>
 
         {/* CSI */}
-        <div className="glass-card glow-gold" style={{ padding: '20px' }}>
+        <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #7C3AED' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               🛎️ Service Index (CSI)
             </span>
             <span className="badge badge-gold">Quality</span>
           </div>
-          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: 'var(--gold)' }}>
+          <div className="mono" style={{ fontSize: '34px', fontWeight: 800, color: '#7C3AED' }}>
             {metrics.csi}%
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <div style={{ fontSize: '12px', color: '#475569', marginTop: '6px' }}>
             Overall service score
           </div>
         </div>
@@ -274,14 +273,14 @@ export default function Dashboard() {
       <section className="glass-card" style={{ padding: '24px', marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF' }}>
+            <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
               Hourly Visitor Footfall Distribution
             </h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: '12px', color: '#475569' }}>
               10:00 AM to 10:00 PM slot counts
             </p>
           </div>
-          <span className="mono" style={{ fontSize: '12px', color: 'var(--gold)' }}>
+          <span className="mono" style={{ fontSize: '12px', color: '#2563EB', fontWeight: 700 }}>
             Peak: {Math.max(...slots.map(s => s.count), 0)} visitors
           </span>
         </div>
@@ -290,18 +289,18 @@ export default function Dashboard() {
 
       {/* Hourly Slot Logs Table */}
       <section className="glass-card" style={{ padding: '24px', marginBottom: '28px' }}>
-        <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '16px' }}>
+        <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>
           Hourly Entry Audit Log
         </h3>
-        <div className="data-table-wrap">
-          <table className="data-table">
+        <div className="data-table-wrap" style={{ overflowX: 'auto' }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr>
-                <th>Time Slot</th>
-                <th>Visitor Count</th>
-                <th>Status</th>
-                <th>Logged By</th>
-                <th>Remarks</th>
+              <tr style={{ background: '#F1F5F9', borderBottom: '2px solid #E2E8F0', textAlign: 'left', color: '#475569' }}>
+                <th style={{ padding: '12px 16px' }}>Time Slot</th>
+                <th style={{ padding: '12px 16px' }}>Visitor Count</th>
+                <th style={{ padding: '12px 16px' }}>Status</th>
+                <th style={{ padding: '12px 16px' }}>Logged By</th>
+                <th style={{ padding: '12px 16px' }}>Remarks</th>
               </tr>
             </thead>
             <tbody>
@@ -312,26 +311,26 @@ export default function Dashboard() {
                 const isEntered = s.count > 0;
 
                 return (
-                  <tr key={idx}>
-                    <td className="mono" style={{ fontWeight: 700, color: '#FFFFFF' }}>
+                  <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                    <td className="mono" style={{ padding: '12px 16px', fontWeight: 700, color: '#0F172A' }}>
                       {s.slotStart}:00 – {s.slotEnd}:00
                     </td>
-                    <td className="mono" style={{ fontSize: '15px', color: 'var(--gold)', fontWeight: 700 }}>
+                    <td className="mono" style={{ padding: '12px 16px', fontSize: '15px', color: '#2563EB', fontWeight: 700 }}>
                       {s.count}
                     </td>
-                    <td>
+                    <td style={{ padding: '12px 16px' }}>
                       {isEntered ? (
                         <span className="badge badge-green">Submitted</span>
                       ) : isPassed ? (
-                        <span className="badge badge-red">Missed</span>
+                        <span className="badge badge-crimson">Missed</span>
                       ) : (
                         <span className="badge badge-gold">Pending</span>
                       )}
                     </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                    <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px' }}>
                       {s.submittedBy || '—'}
                     </td>
-                    <td style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '12px' }}>
+                    <td style={{ padding: '12px 16px', color: '#475569', fontStyle: 'italic', fontSize: '12px' }}>
                       {s.remarks || 'No notes'}
                     </td>
                   </tr>
@@ -345,22 +344,24 @@ export default function Dashboard() {
       {/* Customer Feedback Ticker */}
       {reviews.length > 0 && (
         <section 
-          className="glass-card glow-gold" 
+          className="glass-card" 
           style={{
             padding: '16px 24px',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px'
+            gap: '16px',
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0'
           }}
         >
           <span className="badge badge-gold" style={{ flexShrink: 0 }}>
             🌟 Voice of Customer
           </span>
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <marquee behavior="scroll" direction="left" scrollamount="4" style={{ fontSize: '13px', color: '#FFFFFF', fontStyle: 'italic' }}>
+            <marquee behavior="scroll" direction="left" scrollamount="4" style={{ fontSize: '13px', color: '#0F172A', fontStyle: 'italic' }}>
               {reviews.map((r, i) => (
                 <span key={i} style={{ marginRight: '40px' }}>
-                  " {r.text} " — <strong style={{ color: 'var(--gold)' }}>{r.name}</strong> ({r.area})
+                  " {r.text} " — <strong style={{ color: '#2563EB' }}>{r.name}</strong> ({r.area})
                 </span>
               ))}
             </marquee>

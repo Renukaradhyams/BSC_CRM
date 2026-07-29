@@ -156,80 +156,192 @@ export default function Footfall() {
     }
   };
 
+  const totalFootfallCount = slots.reduce((sum, s) => sum + (s.count || 0), 0);
+
   return (
-    <div className="glass-card fade-in" style={{ padding: '24px' }}>
-      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      {/* Page Header */}
+      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="serif" style={{ fontSize: '28px' }}>Footfall Register</h1>
-          <p style={{ fontSize: '14px', color: 'var(--ink-60)' }}>Record hourly store traffic metrics</p>
+          <h1 className="outfit" style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A' }}>Footfall Register</h1>
+          <p style={{ fontSize: '13px', color: '#475569' }}>Hourly visitor traffic metrics and daily bill summaries</p>
         </div>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '4px', color: 'var(--ink-60)' }}>
-            📅 Select Date
-          </label>
-          <input
-            type="date"
-            value={dateQuery}
-            onChange={(e) => setDateQuery(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: '1.5px solid var(--border)',
-              borderRadius: '8px',
-              fontSize: '14px',
-              background: '#fff'
-            }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '6px 14px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <label style={{ fontSize: '11px', fontWeight: 'bold', display: 'block', color: '#64748B', textTransform: 'uppercase' }}>
+              📅 Select Date
+            </label>
+            <input
+              type="date"
+              value={dateQuery}
+              onChange={(e) => setDateQuery(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#0F172A',
+                background: 'transparent',
+                cursor: 'pointer'
+              }}
+            />
+          </div>
         </div>
       </header>
+
+      {/* Summary KPI Strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="glass-card" style={{ padding: '16px 20px', borderLeft: '4px solid #2563EB' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+            🚶 Total Day Footfall
+          </span>
+          <div className="mono" style={{ fontSize: '28px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
+            {totalFootfallCount} <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>visitors</span>
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ padding: '16px 20px', borderLeft: '4px solid #0D9488' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+            🧾 Daily Total Bills
+          </span>
+          <div className="mono" style={{ fontSize: '28px', fontWeight: 800, color: '#0D9488', marginTop: '4px' }}>
+            {bills || '0'} <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>bills</span>
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ padding: '16px 20px', borderLeft: '4px solid #16A34A' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+            ⏱️ Operating Hours
+          </span>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginTop: '8px' }}>
+            10:00 AM – 10:00 PM
+          </div>
+        </div>
+      </div>
 
       {error && <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>}
       {success && <div className="alert alert-success" style={{ display: 'block' }}>{success}</div>}
 
-      {/* Slots grid inputs */}
-      <section className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+      {/* Hourly Slots List */}
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
         {slots.map((s, idx) => {
           const isLocked = isSlotLocked(s);
+          const formattedStart = s.slotStart > 12 ? `${s.slotStart - 12}:00 PM` : s.slotStart === 12 ? '12:00 PM' : `${s.slotStart}:00 AM`;
+          const formattedEnd = s.slotEnd > 12 ? `${s.slotEnd - 12}:00 PM` : s.slotEnd === 12 ? '12:00 PM' : `${s.slotEnd}:00 AM`;
+
           return (
             <div
               key={idx}
-              className="card"
+              className="glass-card"
               style={{
-                padding: '16px',
-                border: '1.5px solid var(--border)',
-                background: isLocked ? 'var(--surface)' : '#fff',
+                padding: '16px 20px',
+                background: isLocked ? '#F8FAFC' : '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
                 display: 'flex',
                 flexWrap: 'wrap',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '16px',
-                opacity: isLocked ? 0.8 : 1
+                opacity: isLocked ? 0.75 : 1
               }}
             >
-              <div style={{ width: '130px', fontWeight: 'bold', fontSize: '15px' }}>
-                ⏰ {s.slotStart}:00 - {s.slotEnd}:00
+              {/* Slot Time Badge */}
+              <div style={{ minWidth: '170px' }}>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>⏰</span> {formattedStart} – {formattedEnd}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                  {s.submittedBy ? `Saved by ${s.submittedBy}` : 'Slot entry pending'}
+                </div>
               </div>
 
+              {/* Count Input with Quick +/- Buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--ink-60)' }}>Count:</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isLocked) return;
+                    const updated = [...slots];
+                    updated[idx].count = Math.max(0, (updated[idx].count || 0) - 1);
+                    setSlots(updated);
+                  }}
+                  disabled={isLocked || savingSlot === idx}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '6px',
+                    background: '#F1F5F9',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#0F172A',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  -
+                </button>
+
                 <input
                   type="number"
                   min="0"
                   placeholder="0"
-                  value={s.count || ''}
+                  value={s.count === 0 ? '' : s.count}
                   onChange={(e) => {
                     const updated = [...slots];
                     updated[idx].count = parseInt(e.target.value, 10) || 0;
                     setSlots(updated);
                   }}
                   disabled={isLocked || savingSlot === idx}
-                  style={{ width: '80px', padding: '8px 10px', fontSize: '14px', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  style={{
+                    width: '70px',
+                    textAlign: 'center',
+                    padding: '6px 8px',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    color: '#2563EB',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '6px',
+                    background: '#FFFFFF'
+                  }}
                 />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isLocked) return;
+                    const updated = [...slots];
+                    updated[idx].count = (updated[idx].count || 0) + 1;
+                    setSlots(updated);
+                  }}
+                  disabled={isLocked || savingSlot === idx}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '6px',
+                    background: '#EFF6FF',
+                    border: '1px solid #BFDBFE',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  +
+                </button>
               </div>
 
-              <div style={{ flex: 1, minWidth: '150px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--ink-60)' }}>Remarks:</label>
+              {/* Slot Remarks Note */}
+              <div style={{ flex: 1, minWidth: '180px' }}>
                 <input
                   type="text"
-                  placeholder="Slot notes..."
+                  placeholder="Optional slot remarks (e.g. rain, heavy rush)..."
                   value={s.remarks || ''}
                   onChange={(e) => {
                     const updated = [...slots];
@@ -237,39 +349,47 @@ export default function Footfall() {
                     setSlots(updated);
                   }}
                   disabled={isLocked || savingSlot === idx}
-                  style={{ flex: 1, padding: '8px 10px', fontSize: '14px', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                    background: '#FFFFFF'
+                  }}
                 />
               </div>
 
-              <div>
-                <button
-                  onClick={() => handleSlotSave(s, idx)}
-                  disabled={isLocked || savingSlot === idx}
-                  className="btn btn-teal btn-sm"
-                >
-                  {savingSlot === idx ? 'Saving...' : '💾 Save Slot'}
-                </button>
+              {/* Save & Status Actions */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {isLocked ? (
+                  <span className="badge badge-crimson" style={{ fontSize: '11px' }}>
+                    🔒 Locked
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => handleSlotSave(s, idx)}
+                    disabled={savingSlot === idx}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {savingSlot === idx ? 'Saving...' : '💾 Save'}
+                  </button>
+                )}
               </div>
-
-              {isLocked && (
-                <div style={{ fontSize: '11px', color: 'var(--crimson)', fontWeight: 'bold' }}>
-                  🔒 Locked
-                </div>
-              )}
             </div>
           );
         })}
       </section>
 
-      {/* Bill Entries bottom card */}
-      <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
-        <h3 className="serif" style={{ fontSize: '18px', marginBottom: '8px' }}>Day-End Billing Summary</h3>
-        <p style={{ fontSize: '13px', color: 'var(--ink-60)', marginBottom: '16px' }}>
-          Enter the total bills generated for this operational day.
+      {/* Bill Entries summary card */}
+      <section className="glass-card" style={{ padding: '24px', border: '1px solid #E2E8F0', background: '#FFFFFF', marginBottom: '24px' }}>
+        <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>Day-End Billing Summary</h3>
+        <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
+          Enter total completed billing receipts for this operational day.
         </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="field" style={{ marginBottom: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <div style={{ width: '220px' }}>
             <input
               type="number"
               min="0"
@@ -277,15 +397,22 @@ export default function Footfall() {
               value={bills}
               onChange={(e) => setBills(e.target.value)}
               disabled={savingBills}
-              style={{ width: '180px', padding: '10px 14px' }}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: '15px',
+                fontWeight: 600,
+                border: '1.5px solid #CBD5E1',
+                borderRadius: '8px'
+              }}
             />
           </div>
           <button
             onClick={handleBillsSave}
             disabled={savingBills}
-            className="btn btn-teal btn-primary"
+            className="btn btn-primary"
           >
-            {savingBills ? 'Updating...' : '💾 Save Daily Bills'}
+            {savingBills ? 'Updating...' : '💾 Save Daily Bills Total'}
           </button>
         </div>
       </section>

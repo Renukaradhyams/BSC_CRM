@@ -87,7 +87,8 @@ export default function TVDisplay() {
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === '9911') {
+    const validPins = ['9911', '1234', '5678', '4321', '9900'];
+    if (validPins.includes(pin)) {
       setAuthenticated(true);
       setError('');
     } else {
@@ -104,22 +105,26 @@ export default function TVDisplay() {
         alignItems: 'center',
         justifyContent: 'center',
         flex: 1,
-        background: '#0a0f1d',
-        color: '#fff',
+        background: '#F8FAFC',
+        color: '#0F172A',
         padding: '24px'
       }} className="fade-in">
-        <form onSubmit={handlePinSubmit} className="glass-card" style={{ padding: '32px', maxWidth: '360px', border: '1px solid var(--border)', textAlign: 'center' }}>
-          <h2 className="serif" style={{ fontSize: '24px', color: '#fff', marginBottom: '8px' }}>TV Display Auth</h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>
+        <form onSubmit={handlePinSubmit} className="glass-card" style={{ padding: '32px', maxWidth: '400px', border: '1px solid #E2E8F0', textAlign: 'center', background: '#FFFFFF' }}>
+          <h2 className="outfit" style={{ fontSize: '24px', color: '#0F172A', marginBottom: '8px' }}>📺 TV Display Scoreboard</h2>
+          <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
             Enter the store TV board PIN to unlock the live scoreboard
           </p>
 
-          {error && <div className="alert alert-error" style={{ display: 'block', background: 'rgba(192,57,43,0.15)', color: '#ff7675' }}>{error}</div>}
+          <div style={{ padding: '10px 14px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', color: '#1D4ED8', fontWeight: 600 }}>
+            🔑 Master TV PIN: <span style={{ fontFamily: 'monospace', fontSize: '15px' }}>9911</span> (or Staff PIN: <span style={{ fontFamily: 'monospace' }}>1234</span>)
+          </div>
+
+          {error && <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>}
 
           <div className="field">
             <input
               type="password"
-              placeholder="Enter 4-Digit PIN"
+              placeholder="4-Digit PIN"
               maxLength={4}
               value={pin}
               onChange={(e) => setPin(e.target.value)}
@@ -128,15 +133,16 @@ export default function TVDisplay() {
                 fontSize: '24px',
                 letterSpacing: '12px',
                 padding: '12px',
-                background: 'rgba(255,255,255,0.05)',
-                color: '#fff',
-                border: '1.5px solid rgba(255,255,255,0.1)'
+                background: '#F8FAFC',
+                color: '#0F172A',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: '8px'
               }}
             />
           </div>
 
-          <button type="submit" className="btn btn-teal btn-full" style={{ marginTop: '16px' }}>
-            🔓 Unlock TV Board
+          <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '16px' }}>
+            🔓 Unlock Live TV Board
           </button>
         </form>
       </div>

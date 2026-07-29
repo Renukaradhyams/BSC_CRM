@@ -203,10 +203,10 @@ export default function Admin() {
     <div className="page-container fade-in">
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
-        <h1 className="outfit" style={{ fontSize: '26px', fontWeight: 800, color: '#FFFFFF' }}>
+        <h1 className="outfit" style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A' }}>
           Admin Control Center & Credential Vault
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+        <p style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
           Manage staff credentials, store settings, sections, and system status
         </p>
       </div>
@@ -220,7 +220,7 @@ export default function Admin() {
           display: 'flex',
           gap: '8px',
           marginBottom: '24px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid #E2E8F0',
           paddingBottom: '12px'
         }}
       >
@@ -238,9 +238,9 @@ export default function Admin() {
               borderRadius: '10px',
               fontSize: '13px',
               fontWeight: 600,
-              background: activeTab === tab.id ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
-              color: activeTab === tab.id ? '#0B0E19' : 'var(--text-muted)',
-              border: activeTab === tab.id ? 'none' : '1px solid rgba(255,255,255,0.08)',
+              background: activeTab === tab.id ? '#2563EB' : '#FFFFFF',
+              color: activeTab === tab.id ? '#FFFFFF' : '#475569',
+              border: activeTab === tab.id ? 'none' : '1px solid #E2E8F0',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -250,8 +250,8 @@ export default function Admin() {
             {tab.count !== undefined && (
               <span
                 style={{
-                  background: activeTab === tab.id ? '#0B0E19' : 'rgba(255,255,255,0.1)',
-                  color: activeTab === tab.id ? 'var(--gold)' : 'var(--text-main)',
+                  background: activeTab === tab.id ? '#FFFFFF' : '#F1F5F9',
+                  color: activeTab === tab.id ? '#2563EB' : '#475569',
                   fontSize: '11px',
                   padding: '2px 7px',
                   borderRadius: '10px'
@@ -266,12 +266,31 @@ export default function Admin() {
 
       {/* TAB 1: User Vault & Access Control */}
       {activeTab === 'users' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px', alignItems: 'start' }}>
-          {/* User List Table with Credential Vault */}
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '16px' }}>
-              🔑 Staff Credential Vault
-            </h3>
+        <div>
+          {/* Live TV Display PIN Banner */}
+          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h4 style={{ color: '#1D4ED8', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>📺</span> Store Live TV Board PIN Code
+              </h4>
+              <p style={{ color: '#3B82F6', fontSize: '12px', marginTop: '2px' }}>
+                Use this master PIN to unlock the live scoreboard on store display TVs
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>TV PIN:</span>
+              <span className="mono" style={{ background: '#2563EB', color: '#FFFFFF', padding: '6px 14px', borderRadius: '8px', fontSize: '16px', fontWeight: 800, letterSpacing: '2px' }}>
+                9911
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px', alignItems: 'start' }}>
+            {/* User List Table with Credential Vault */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>
+                🔑 Staff Credential Vault
+              </h3>
             <div className="data-table-wrap">
               <table className="data-table">
                 <thead>

@@ -130,17 +130,17 @@ export default function Login() {
         {/* Left Brand Showcase Panel */}
         <div 
           style={{
-            background: 'linear-gradient(145deg, #1C233D 0%, #0E1324 100%)',
+            background: 'linear-gradient(145deg, #0F172A 0%, #1E293B 100%)',
             padding: '44px 36px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            borderRight: '1px solid rgba(255,255,255,0.08)',
+            borderRight: '1px solid #E2E8F0',
             position: 'relative',
             overflow: 'hidden'
           }}
         >
-          {/* Subtle Ambient Glow */}
+          {/* Ambient Accent Glow */}
           <div 
             style={{
               position: 'absolute',
@@ -148,7 +148,7 @@ export default function Login() {
               left: '-80px',
               width: '240px',
               height: '240px',
-              background: 'radial-gradient(circle, rgba(245,200,66,0.15) 0%, rgba(0,0,0,0) 70%)',
+              background: 'radial-gradient(circle, rgba(37,99,235,0.2) 0%, rgba(0,0,0,0) 70%)',
               pointerEvents: 'none'
             }}
           />
@@ -164,7 +164,7 @@ export default function Login() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
                   padding: '4px'
                 }}
               >
@@ -178,17 +178,17 @@ export default function Login() {
                 <h1 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
                   {settings?.companyName || 'BSC Textiles'}
                 </h1>
-                <p style={{ fontSize: '11px', color: 'var(--text-gold)', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '3px', fontWeight: 600 }}>
+                <p style={{ fontSize: '11px', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '3px', fontWeight: 600 }}>
                   Retail Management CRM
                 </p>
               </div>
             </div>
 
             <div style={{ marginTop: '40px' }}>
-              <h2 className="outfit" style={{ fontSize: '28px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.25, marginBottom: '12px' }}>
+              <h2 className="outfit" style={{ fontSize: '26px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.25, marginBottom: '12px' }}>
                 Store Operations & Experience Portal
               </h2>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6 }}>
                 Unified intelligence for footfalls, customer satisfaction, sourcing diverts, and store visual merchandising.
               </p>
             </div>
@@ -196,23 +196,23 @@ export default function Login() {
 
           {/* Quick Info Badges */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-              <span style={{ color: 'var(--gold)', fontSize: '16px' }}>✨</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
+              <span style={{ color: '#60A5FA', fontSize: '16px' }}>✨</span>
               <span>Tablet-ready hourly footfall & feedback capture</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-              <span style={{ color: '#10B981', fontSize: '16px' }}>🛡️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
+              <span style={{ color: '#34D399', fontSize: '16px' }}>🛡️</span>
               <span>Encrypted multi-role access control</span>
             </div>
           </div>
         </div>
 
         {/* Right Form Panel */}
-        <div style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h2 className="outfit" style={{ fontSize: '24px', fontWeight: 700, color: '#FFFFFF', marginBottom: '6px' }}>
+        <div style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#FFFFFF' }}>
+          <h2 className="outfit" style={{ fontSize: '24px', fontWeight: 700, color: '#0F172A', marginBottom: '6px' }}>
             Sign In to Portal
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+          <p style={{ fontSize: '13px', color: '#475569', marginBottom: '24px' }}>
             Select your staff role to open your portal workspace
           </p>
 
@@ -223,10 +223,10 @@ export default function Login() {
               gridTemplateColumns: 'repeat(4, 1fr)',
               gap: '8px',
               marginBottom: '24px',
-              background: 'rgba(255,255,255,0.03)',
+              background: '#F1F5F9',
               padding: '6px',
               borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.06)'
+              border: '1px solid #E2E8F0'
             }}
           >
             {[
@@ -251,9 +251,9 @@ export default function Login() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '4px',
-                  background: selectedRole === role.id ? 'var(--gold)' : 'transparent',
-                  color: selectedRole === role.id ? '#0B0E19' : 'var(--text-muted)',
-                  boxShadow: selectedRole === role.id ? '0 4px 12px rgba(245,200,66,0.3)' : 'none',
+                  background: selectedRole === role.id ? '#2563EB' : 'transparent',
+                  color: selectedRole === role.id ? '#FFFFFF' : '#475569',
+                  boxShadow: selectedRole === role.id ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >

@@ -263,6 +263,31 @@ export async function initDb() {
 
   console.log('✅ All database tables ready.');
   await seedIfEmpty();
+  await ensureGreeterUsers();
+}
+
+async function ensureGreeterUsers() {
+  try {
+    const greeters = await query("SELECT id FROM User WHERE role = 'greeter' LIMIT 1");
+    if (greeters.length === 0) {
+      console.log('🌱 Seeding Greeter staff sample accounts...');
+      const greeterHash = await bcrypt.hash('1234', 10);
+      await query(
+        `INSERT INTO User (name, email, password, role, sectionsAssigned, pin, plainPassword, isActive) VALUES
+           (?, ?, ?, 'greeter', 'ALL', ?, ?, TRUE),
+           (?, ?, ?, 'greeter', 'ALL', ?, ?, TRUE),
+           (?, ?, ?, 'greeter', 'ALL', ?, ?, TRUE)`,
+        [
+          'Greeter 1 (Main Gate)', 'greeter1@store.com', greeterHash, '1234', '1234',
+          'Greeter 2 (North Gate)', 'greeter2@store.com', greeterHash, '5678', '5678',
+          'Greeter 3 (VIP Lounge)', 'greeter3@store.com', greeterHash, '4321', '4321'
+        ]
+      );
+      console.log('✅ Greeter sample data successfully seeded (PINs: 1234, 5678, 4321).');
+    }
+  } catch (err) {
+    console.error('Failed to verify/seed greeters', err);
+  }
 }
 
 async function seedIfEmpty() {
