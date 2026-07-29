@@ -308,7 +308,7 @@ export default function Admin() {
                     const isRevealed = revealedUsers.has(u.id);
                     return (
                       <tr key={u.id}>
-                        <td style={{ fontWeight: 700, color: '#FFFFFF' }}>
+                        <td style={{ fontWeight: 700, color: '#0F172A' }}>
                           {u.name}
                         </td>
                         <td>
@@ -371,129 +371,130 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
-          </div>
+            </div>
 
-          {/* User Registration Form Card */}
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '16px' }}>
-              ➕ Register New User
-            </h3>
-            <form onSubmit={handleCreateUser}>
-              <div className="field">
-                <label>User Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Durgappa"
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label>Email / Username</label>
-                <input
-                  type="text"
-                  placeholder="durgappa@store.com"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                />
-              </div>
-
-              <div className="field">
-                <label>Assign Role</label>
-                <select
-                  value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value)}
-                >
-                  <option value="greeter">🚶 Greeter (Tablet PIN Login)</option>
-                  <option value="crm_staff">📊 CRM Staff</option>
-                  <option value="crm_manager">📊 CRM Manager</option>
-                  <option value="telecaller">📞 Telecaller</option>
-                  <option value="purchase_manager">👔 Purchase Manager</option>
-                  <option value="vm">🏢 Visual Merchandiser</option>
-                  <option value="admin">🛡️ Administrator</option>
-                </select>
-              </div>
-
-              <div className="field">
-                <label>Password</label>
-                <input
-                  type="text"
-                  placeholder="Set password"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                />
-              </div>
-
-              {newUserRole === 'greeter' && (
+            {/* User Registration Form Card */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>
+                ➕ Register New User
+              </h3>
+              <form onSubmit={handleCreateUser}>
                 <div className="field">
-                  <label>4-Digit Greeter Tablet PIN</label>
+                  <label>User Name</label>
                   <input
                     type="text"
-                    maxLength={4}
-                    placeholder="e.g. 1234"
-                    value={newUserPin}
-                    onChange={(e) => setNewUserPin(e.target.value)}
+                    placeholder="e.g. Durgappa"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
                   />
+                </div>
+
+                <div className="field">
+                  <label>Email / Username</label>
+                  <input
+                    type="text"
+                    placeholder="durgappa@store.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Assign Role</label>
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value)}
+                  >
+                    <option value="greeter">🚶 Greeter (Tablet PIN Login)</option>
+                    <option value="crm_staff">📊 CRM Staff</option>
+                    <option value="crm_manager">📊 CRM Manager</option>
+                    <option value="telecaller">📞 Telecaller</option>
+                    <option value="purchase_manager">👔 Purchase Manager</option>
+                    <option value="vm">🏢 Visual Merchandiser</option>
+                    <option value="admin">🛡️ Administrator</option>
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Password</label>
+                  <input
+                    type="text"
+                    placeholder="Set password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                  />
+                </div>
+
+                {newUserRole === 'greeter' && (
+                  <div className="field">
+                    <label>4-Digit Greeter Tablet PIN</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      placeholder="e.g. 1234"
+                      value={newUserPin}
+                      onChange={(e) => setNewUserPin(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '8px' }}>
+                  ➕ Create User Account
+                </button>
+              </form>
+
+              {/* Inline Password Reset Panel */}
+              {resetUserId !== null && (
+                <div
+                  style={{
+                    marginTop: '24px',
+                    padding: '20px',
+                    borderRadius: '14px',
+                    background: 'rgba(245,200,66,0.08)',
+                    border: '1px solid var(--border-gold)'
+                  }}
+                >
+                  <h4 className="outfit" style={{ fontSize: '15px', color: 'var(--gold)', marginBottom: '12px' }}>
+                    ✏️ Reset User Password / PIN (ID: {resetUserId})
+                  </h4>
+                  <div className="field">
+                    <label>New Password</label>
+                    <input
+                      type="text"
+                      placeholder="New password"
+                      value={resetPasswordVal}
+                      onChange={(e) => setResetPasswordVal(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>New 4-Digit PIN</label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      placeholder="New 4-digit PIN"
+                      value={resetPinVal}
+                      onChange={(e) => setResetPinVal(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleResetCredentialsSubmit(resetUserId)}
+                      className="btn btn-primary btn-sm"
+                    >
+                      💾 Save Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetUserId(null)}
+                      className="btn btn-ghost btn-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               )}
-
-              <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '8px' }}>
-                ➕ Create User Account
-              </button>
-            </form>
-
-            {/* Inline Password Reset Modal / Panel */}
-            {resetUserId !== null && (
-              <div
-                style={{
-                  marginTop: '24px',
-                  padding: '20px',
-                  borderRadius: '14px',
-                  background: 'rgba(245,200,66,0.08)',
-                  border: '1px solid var(--border-gold)'
-                }}
-              >
-                <h4 className="outfit" style={{ fontSize: '15px', color: 'var(--gold)', marginBottom: '12px' }}>
-                  ✏️ Reset User Password / PIN (ID: {resetUserId})
-                </h4>
-                <div className="field">
-                  <label>New Password</label>
-                  <input
-                    type="text"
-                    placeholder="New password"
-                    value={resetPasswordVal}
-                    onChange={(e) => setResetPasswordVal(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label>New 4-Digit PIN</label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    placeholder="New 4-digit PIN"
-                    value={resetPinVal}
-                    onChange={(e) => setResetPinVal(e.target.value)}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleResetCredentialsSubmit(resetUserId)}
-                    className="btn btn-primary btn-sm"
-                  >
-                    💾 Save Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setResetUserId(null)}
-                    className="btn btn-ghost btn-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}
@@ -501,7 +502,7 @@ export default function Admin() {
       {/* TAB 2: Company Configurations */}
       {activeTab === 'company' && (
         <div className="glass-card" style={{ padding: '28px', maxWidth: '700px' }}>
-          <h3 className="outfit" style={{ fontSize: '20px', fontWeight: 700, color: '#FFFFFF', marginBottom: '20px' }}>
+          <h3 className="outfit" style={{ fontSize: '20px', fontWeight: 700, color: '#0F172A', marginBottom: '20px' }}>
             🏢 Store & Company Profile Parameters
           </h3>
           <form onSubmit={handleUpdateSettings}>

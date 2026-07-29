@@ -306,25 +306,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             >
               <span style={{ color: '#2563EB' }}>⏰</span> IST {timeStr || '10:00:00'}
             </div>
-                border: '1px solid rgba(255,255,255,0.08)'
-              }}
-            >
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#10B981',
-                  boxShadow: '0 0 10px #10B981'
-                }}
-              />
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                IST
-              </span>
-              <span className="mono" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--gold)' }}>
-                {timeStr}
-              </span>
-            </div>
 
             {/* Profile Avatar Pill */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -333,13 +314,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   width: '34px',
                   height: '34px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #F5C842 0%, #D9A514 100%)',
-                  color: '#0B0E19',
+                  background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                  color: '#FFFFFF',
                   fontWeight: 800,
                   fontSize: '13px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.3)'
                 }}
               >
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
