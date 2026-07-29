@@ -125,7 +125,7 @@ export const saveFeedback = async (req: Request, res: Response) => {
       return res.status(400).json({ ok: false, error: 'Missing required feedback data' });
     }
 
-    const [result]: any = await query(
+    const result: any = await query(
       `INSERT INTO Feedback (date, source, area, yourVoice, custName, custMobile, custDob,
          q0, q0_other, q1, q1_other, q2, q2_other, q3, q3_other,
          q4, q4_other, q5, q5_other, q6, q6_other, q7, q7_other, status)

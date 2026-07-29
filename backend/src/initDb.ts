@@ -365,7 +365,7 @@ async function seedIfEmpty() {
   // ── 8. Sample Feedback entries ───────────────────────────────────────────
   const todayStr = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
 
-  const [f1]: any = await query(
+  const f1: any = await query(
     `INSERT INTO Feedback
        (date, source, area, yourVoice, custName, custMobile, q0, q1, q2, q3, status)
      VALUES (?, 'staff', 'Ground Floor', ?, 'Amit Kumar', '9876543210',
@@ -373,7 +373,7 @@ async function seedIfEmpty() {
     [todayStr, 'Outstanding service and great collection — will visit again!']
   );
 
-  const [f2]: any = await query(
+  const f2: any = await query(
     `INSERT INTO Feedback
        (date, source, area, yourVoice, custName, custMobile, q0, q1, q2, q3, status)
      VALUES (?, 'qr_self', '1st Floor', ?, 'Sunita Deshpande', '9123456789',
@@ -381,7 +381,7 @@ async function seedIfEmpty() {
     [todayStr, 'Waited 20 minutes at counter — billing is very slow.']
   );
 
-  const [f3]: any = await query(
+  const f3: any = await query(
     `INSERT INTO Feedback
        (date, source, area, yourVoice, custName, custMobile, q0, q1, q2, q3, status)
      VALUES (?, 'staff', '2nd Floor', ?, 'Ravi Shankar', '9988776655',

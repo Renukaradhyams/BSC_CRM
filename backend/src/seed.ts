@@ -100,12 +100,12 @@ async function main() {
 
   // 8. Seed Customer Feedback
   const todayStr = new Date().toLocaleDateString('en-GB');
-  const [f1Result]: any = await query(
+  const f1Result: any = await query(
     `INSERT INTO Feedback (date, source, area, yourVoice, custName, custMobile, q0, q1, status)
      VALUES (?, 'staff', 'Ground Floor', ?, ?, '9876543210', 'Excellent', 'Yes, Definitely', 'new')`,
     [todayStr, 'Outstanding service, great collections!', 'Amit Kumar']
   );
-  const [f2Result]: any = await query(
+  const f2Result: any = await query(
     `INSERT INTO Feedback (date, source, area, yourVoice, custName, custMobile, q0, q1, status)
      VALUES (?, 'qr_self', '1st Floor', ?, ?, '9123456789', 'Poor', 'No', 'new')`,
     [todayStr, 'Waited 20 minutes at counter, billing is very slow.', 'Sunita Deshpande']
