@@ -1,0 +1,263 @@
+import React, { useEffect, useState } from 'react';
+import api from '../services/api';
+
+interface TVMetricState {
+  totalFootfall: number;
+  totalBills: number;
+  openDiverts: number;
+  feedbacksCollected: number;
+  nps: number;
+  csi: number;
+}
+
+interface TVSlot {
+  slotStart: number;
+  slotEnd: number;
+  count: number;
+  remarks: string | null;
+}
+
+interface TVReview {
+  name: string;
+  area: string;
+  text: string;
+}
+
+export default function TVDisplay() {
+  const [pin, setPin] = useState<string>('');
+  const [authenticated, setAuthenticated] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+
+  const [metrics, setMetrics] = useState<TVMetricState>({
+    totalFootfall: 0,
+    totalBills: 0,
+    openDiverts: 0,
+    feedbacksCollected: 0,
+    nps: 0,
+    csi: 0
+  });
+  const [slots, setSlots] = useState<TVSlot[]>([]);
+  const [reviews, setReviews] = useState<TVReview[]>([]);
+  const [timeStr, setTimeStr] = useState<string>('');
+
+  // Clock
+  useEffect(() => {
+    if (!authenticated) return;
+    const interval = setInterval(() => {
+      const d = new Date();
+      setTimeStr(d.toLocaleTimeString('en-US', { hour12: false }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [authenticated]);
+
+  // Dynamic poll updates every 10s
+  useEffect(() => {
+    if (!authenticated) return;
+    const fetchTVData = async () => {
+      try {
+        const res = await api.get('/api/crm/tv-dashboard', {
+          headers: { 'x-tv-pin': '9911' }
+        });
+        if (res.data && res.data.ok) {
+          setMetrics(res.data.metrics);
+          setReviews(res.data.reviews || []);
+
+          const DEFAULT_SLOTS = Array.from({ length: 12 }, (_, i) => ({
+            slotStart: 10 + i,
+            slotEnd: 11 + i,
+            count: 0,
+            remarks: null
+          }));
+          const fetchedFootfalls: TVSlot[] = res.data.footfalls || [];
+          const merged = DEFAULT_SLOTS.map(def => {
+            const match = fetchedFootfalls.find(f => f.slotStart === def.slotStart);
+            return match ? match : def;
+          });
+          setSlots(merged);
+        }
+      } catch (err) {
+        console.error('TV Board fetch failed', err);
+      }
+    };
+
+    fetchTVData();
+    const poll = setInterval(fetchTVData, 10000);
+    return () => clearInterval(poll);
+  }, [authenticated]);
+
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin === '9911') {
+      setAuthenticated(true);
+      setError('');
+    } else {
+      setError('Incorrect TV Display PIN code');
+      setPin('');
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+        background: '#0a0f1d',
+        color: '#fff',
+        padding: '24px'
+      }} className="fade-in">
+        <form onSubmit={handlePinSubmit} className="card" style={{ padding: '32px', maxWidth: '360px', border: 'none', background: '#11192e', textAlign: 'center' }}>
+          <h2 className="serif" style={{ fontSize: '24px', color: '#fff', marginBottom: '8px' }}>TV Display Auth</h2>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>
+            Enter the store TV board PIN to unlock the live scoreboard
+          </p>
+
+          {error && <div className="alert alert-error" style={{ display: 'block', background: 'rgba(192,57,43,0.15)', color: '#ff7675' }}>{error}</div>}
+
+          <div className="field">
+            <input
+              type="password"
+              placeholder="Enter 4-Digit PIN"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              style={{
+                textAlign: 'center',
+                fontSize: '24px',
+                letterSpacing: '12px',
+                padding: '12px',
+                background: 'rgba(255,255,255,0.05)',
+                color: '#fff',
+                border: '1.5px solid rgba(255,255,255,0.1)'
+              }}
+            />
+          </div>
+
+          <button type="submit" className="btn btn-teal btn-full" style={{ marginTop: '16px' }}>
+            🔓 Unlock TV Board
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      background: '#050a14',
+      color: '#fff',
+      padding: '24px',
+      overflow: 'hidden'
+    }} className="fade-in">
+      {/* Header bar */}
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '2px solid rgba(255,255,255,0.05)',
+        paddingBottom: '16px',
+        marginBottom: '20px'
+      }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', fontFamily: "'DM Serif Display', serif", color: 'var(--gold-l)', letterSpacing: '0.02em' }}>
+            BSC TEXTILES BELAGAVI
+          </h1>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Live Performance Pulse Board
+          </span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '28px', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff' }}>
+            {timeStr}
+          </div>
+          <span style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 'bold' }}>
+            ● LIVE AUTO-POLLING ACTIVATED
+          </span>
+        </div>
+      </header>
+
+      {/* Main Scoreboard Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', flex: 1, minHeight: 0 }}>
+        {/* Left Side: Scoreboard KPIs */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: '#0e172a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>🚶 Visitors Today</span>
+            <div style={{ fontSize: '48px', fontWeight: 'bold', color: 'var(--gold-l)', marginTop: '8px' }}>{metrics.totalFootfall}</div>
+          </div>
+          <div style={{ background: '#0e172a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>🧾 Bills Count</span>
+            <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#fff', marginTop: '8px' }}>{metrics.totalBills}</div>
+          </div>
+          <div style={{ background: '#0e172a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>💬 Recommend (NPS)</span>
+            <div style={{ fontSize: '48px', fontWeight: 'bold', color: 'var(--green)', marginTop: '8px' }}>{metrics.nps}%</div>
+          </div>
+        </div>
+
+        {/* Right Side: Hourly slot grid list */}
+        <div style={{ background: '#0e172a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--gold-l)', marginBottom: '16px' }}>Hourly Traffic Slots</h3>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+            {slots.map((s, idx) => {
+              const entered = s.count > 0;
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    background: entered ? 'rgba(46,204,113,0.05)' : 'rgba(255,255,255,0.02)',
+                    border: `1.5px solid ${entered ? 'rgba(46,204,113,0.2)' : 'rgba(255,255,255,0.05)'}`,
+                    borderRadius: '8px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'rgba(255,255,255,0.85)' }}>
+                    ⏰ {s.slotStart}:00 - {s.slotEnd}:00
+                  </span>
+                  <span style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: entered ? 'var(--green)' : 'rgba(255,255,255,0.2)'
+                  }}>
+                    {entered ? `${s.count} pax` : '—'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Guest Praise Loop Ticker marquee footer */}
+      {reviews.length > 0 && (
+        <footer style={{
+          background: 'var(--gold-l)',
+          color: '#050a14',
+          padding: '14px 20px',
+          borderRadius: '10px',
+          marginTop: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '11px', textTransform: 'uppercase', background: '#050a14', color: 'var(--gold-l)', padding: '4px 10px', borderRadius: '4px', flexShrink: 0 }}>
+            🌟 CUSTOMER FEEDBACK
+          </span>
+          <marquee behavior="scroll" direction="left" scrollamount="4" style={{ fontSize: '14px', fontWeight: 600, fontStyle: 'italic' }}>
+            {reviews.map((r, i) => (
+              <span key={i} style={{ marginRight: '40px' }}>
+                " {r.text} " — {r.name} ({r.area})
+              </span>
+            ))}
+          </marquee>
+        </footer>
+      )}
+    </div>
+  );
+}

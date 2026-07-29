@@ -1,0 +1,301 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../backend/node_modules/.prisma/client"
+}
+
+// 1. CRM Settings & Profile
+model Settings {
+  id                 Int       @id @default(autoincrement())
+  companyName        String    @default("Retail CRM")
+  companyLogoUrl     String?   @db.VarChar(500)
+  operatingStart     String    @default("10:00")
+  operatingEnd       String    @default("22:00")
+  footfallGraceMin   Int       @default(30)
+  footfallEditCutoff String    @default("10:30")
+  derEmail           String?
+  derWhatsappNote    String?   @db.VarChar(500)
+  setupComplete      Boolean   @default(false)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+}
+
+// 2. CRM Users
+model User {
+  id               Int            @id @default(autoincrement())
+  name             String
+  email            String         @unique // Used as Username
+  password         String         // Hashed with bcrypt
+  role             Role
+  sectionsAssigned String         @default("ALL") // "ALL" or comma-separated list
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  deletedAt        DateTime?      @map("deleted_at")
+  divertUpdates    DivertUpdate[]
+}
+
+enum Role {
+  super_admin
+  admin
+  crm_manager
+  crm_staff
+  purchase_manager
+  telecaller
+  vm
+  pm
+  hr
+}
+
+// 3. Store Sections
+model Section {
+  id           Int       @id @default(autoincrement())
+  sectionId    String    @unique // User entered code e.g. "S1"
+  sectionName  String
+  type         String    // "sales" | "non_sales"
+  managerName  String?
+  managerEmail String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+}
+
+// 4. Hourly Footfall
+model FootfallEntry {
+  id          Int       @id @default(autoincrement())
+  date        String // "DD/MM/YYYY" format
+  slotStart   Int // e.g. 10
+  slotEnd     Int // e.g. 11
+  count       Int
+  remarks     String?   @db.VarChar(500)
+  submittedBy String
+  editedBy    String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@unique([date, slotStart])
+}
+
+// 5. Daily Summary (Bills count)
+model DailySummary {
+  id         Int       @id @default(autoincrement())
+  date       String    @unique // "DD/MM/YYYY"
+  billsCount Int
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+}
+
+// 6. Feedback Questions
+model FeedbackQuestion {
+  id           Int       @id @default(autoincrement())
+  qId          String    @unique // e.g. "Q1"
+  qText        String    @db.Text
+  options      Json // Array of options ["Excellent", "Good", ...]
+  isMandatory  Boolean   @default(true)
+  displayOrder Int       @default(1)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+}
+
+// 7. Customer Feedbacks
+model Feedback {
+  id          Int       @id @default(autoincrement())
+  date        String // "DD/MM/YYYY"
+  source      String // "staff" | "walk_in" | "qr_self"
+  area        String
+  yourVoice   String?   @db.Text
+  custName    String?
+  custMobile  String?
+  custDob     String?
+  // Dynamic mapped columns for questions Q0 to Q7
+  q0          String?
+  q0_other    String?
+  q1          String?
+  q1_other    String?
+  q2          String?
+  q2_other    String?
+  q3          String?
+  q3_other    String?
+  q4          String?
+  q4_other    String?
+  q5          String?
+  q5_other    String?
+  q6          String?
+  q6_other    String?
+  q7          String?
+  q7_other    String?
+  status      String    @default("new") // "new" | "reviewed" | "action_taken" | "closed"
+  actionTaken String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  callQueue   CallQueue?
+}
+
+// 8. Call Queue
+model CallQueue {
+  id           Int       @id @default(autoincrement())
+  feedbackId   Int       @unique
+  feedback     Feedback  @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  callType     String // "negative" | "positive"
+  callStatus   String? // "issue_resolved", "will_visit", "no_answer", etc.
+  callNote     String?   @db.Text
+  callAttempts Int       @default(0)
+  escalated    Boolean   @default(false)
+  followupDate String?
+  isDone       Boolean   @default(false)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+}
+
+// 9. Divert Reasons
+model DivertReason {
+  id         Int       @id @default(autoincrement())
+  reasonId   String    @unique
+  reasonText String    @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+}
+
+// 10. Divert Entries
+model Divert {
+  id              Int            @id @default(autoincrement())
+  divertId        String         @unique // e.g. "DIV-12345"
+  date            String // "DD/MM/YYYY"
+  sectionId       String
+  sectionName     String
+  productWanted   String
+  qty             Int?
+  priceRange      String?
+  fabricOccasion  String?
+  reasonCode      String
+  detailedRemarks String?        @db.Text
+  comingBack      String // "Yes" | "No"
+  custName        String?
+  custMobile      String?
+  expectedDate    String?
+  raisedBy        String
+  status          String         @default("open") // "open" | "sourcing" | "available" | "closed" | "cannot_fulfill"
+  pmAction        String?        @db.Text
+  adminRemark     String?        @db.Text
+  closedAt        DateTime?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  deletedAt       DateTime?      @map("deleted_at")
+  updates         DivertUpdate[]
+}
+
+// 11. Divert Logs
+model DivertUpdate {
+  id        Int      @id @default(autoincrement())
+  divertId  Int
+  divert    Divert   @relation(fields: [divertId], references: [id], onDelete: Cascade)
+  updatedBy String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  role      String
+  note      String   @db.Text
+  newStatus String?
+  timestamp DateTime @default(now())
+}
+
+// 12. Cash Settlements
+model CashSettlement {
+  id            Int                 @id @default(autoincrement())
+  date          String              @unique // "YYYY-MM-DD"
+  saleAmount    Decimal             @db.Decimal(12, 2)
+  billsCount    Int
+  abv           Decimal             @db.Decimal(12, 2)
+  cashTotal     Decimal             @db.Decimal(12, 2)
+  cardTotal     Decimal             @db.Decimal(12, 2)
+  upiTotal      Decimal             @db.Decimal(12, 2)
+  cashDiff      Decimal             @db.Decimal(12, 2)
+  cardDiff      Decimal             @db.Decimal(12, 2)
+  upiDiff       Decimal             @db.Decimal(12, 2)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  deletedAt     DateTime?           @map("deleted_at")
+  counterReport CashCounterReport[]
+}
+
+model CashCounterReport {
+  id           Int            @id @default(autoincrement())
+  settlementId Int
+  settlement   CashSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  counterId    String
+  cashierName  String
+  cashDiff     Decimal        @db.Decimal(12, 2)
+  cardDiff     Decimal        @db.Decimal(12, 2)
+  upiDiff      Decimal        @db.Decimal(12, 2)
+  staffDisc    Decimal        @db.Decimal(12, 2)
+  custDisc     Decimal        @db.Decimal(12, 2)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  deletedAt    DateTime?      @map("deleted_at")
+}
+
+// 13. VM Users
+model VMUser {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  pin       String // Hashed or simple PIN
+  role      String // "admin" | "staff"
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+}
+
+// 14. VM Checklist Points
+model VMChecklistPoint {
+  id        Int       @id @default(autoincrement())
+  pointNo   Int       @unique
+  aspect    String
+  point     String    @db.Text
+  type      String // "Overall" | "Floor"
+  frequency String // "Daily", "3 Days Once", "Weekly", etc.
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+}
+
+// 15. VM Submissions
+model VMSubmission {
+  id          Int                 @id @default(autoincrement())
+  date        String // "YYYY-MM-DD"
+  type        String // "overall" | "floor"
+  floor       String? // e.g. "Ground Floor"
+  submittedBy String
+  score       Decimal             @db.Decimal(3, 2)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  deletedAt   DateTime?           @map("deleted_at")
+  entries     VMSubmissionEntry[]
+}
+
+model VMSubmissionEntry {
+  id           Int          @id @default(autoincrement())
+  submissionId Int
+  submission   VMSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  pointNo      Int
+  value        String // "yes" | "no" | "na"
+  remarks      String?      @db.Text
+  photoLink    String?      @db.VarChar(500)
+  photoThumb   String?      @db.VarChar(500)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  deletedAt    DateTime?    @map("deleted_at")
+}
