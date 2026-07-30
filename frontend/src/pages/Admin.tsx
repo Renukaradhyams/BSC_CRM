@@ -52,6 +52,11 @@ export default function Admin() {
   const [derEmail, setDerEmail] = useState<string>('');
   const [tvBoardPin, setTvBoardPin] = useState<string>('9911');
   const [cashSettlementPin, setCashSettlementPin] = useState<string>('1234');
+  const [vmChecklistPin, setVmChecklistPin] = useState<string>('5678');
+  const [feedbackQ0Label, setFeedbackQ0Label] = useState<string>('How was your shopping experience overall?');
+  const [feedbackQ1Label, setFeedbackQ1Label] = useState<string>('Would you recommend BSC Belagavi to friends & family?');
+  const [feedbackQ2Label, setFeedbackQ2Label] = useState<string>('How satisfied are you with our staff assistance & service?');
+  const [feedbackQ3Label, setFeedbackQ3Label] = useState<string>('Any additional comments or product requirements?');
   const [allowSelfRegister, setAllowSelfRegister] = useState<boolean>(true);
   const [defaultRegisterRole, setDefaultRegisterRole] = useState<string>('crm_staff');
   const [requireAdminApproval, setRequireAdminApproval] = useState<boolean>(false);
@@ -104,6 +109,11 @@ export default function Admin() {
         setDerEmail(s.derEmail || '');
         setTvBoardPin(s.tvBoardPin || '9911');
         setCashSettlementPin(s.cashSettlementPin || '1234');
+        setVmChecklistPin(s.vmChecklistPin || '5678');
+        setFeedbackQ0Label(s.feedbackQ0Label || 'How was your shopping experience overall?');
+        setFeedbackQ1Label(s.feedbackQ1Label || 'Would you recommend BSC Belagavi to friends & family?');
+        setFeedbackQ2Label(s.feedbackQ2Label || 'How satisfied are you with our staff assistance & service?');
+        setFeedbackQ3Label(s.feedbackQ3Label || 'Any additional comments or product requirements?');
         setAllowSelfRegister(s.allowSelfRegister !== undefined ? Boolean(s.allowSelfRegister) : true);
         setDefaultRegisterRole(s.defaultRegisterRole || 'crm_staff');
         setRequireAdminApproval(s.requireAdminApproval !== undefined ? Boolean(s.requireAdminApproval) : false);
@@ -148,12 +158,17 @@ export default function Admin() {
         derEmail,
         tvBoardPin,
         cashSettlementPin,
+        vmChecklistPin,
+        feedbackQ0Label,
+        feedbackQ1Label,
+        feedbackQ2Label,
+        feedbackQ3Label,
         allowSelfRegister,
         defaultRegisterRole,
         requireAdminApproval
       });
       if (res.data && res.data.ok) {
-        setSuccess('Completed: Store profile parameters and registration policies saved successfully!');
+        setSuccess('Completed: Store profile parameters, PINs, and feedback questions saved successfully!');
         checkSetupStatus();
       } else {
         setError(res.data?.error || 'Failed to save settings.');
@@ -618,7 +633,7 @@ export default function Admin() {
                 Configure access PINs for store Live TV Scoreboards and Cash Settlement counters
               </p>
 
-              <div className="field-row">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div className="field" style={{ margin: 0 }}>
                   <label style={{ color: '#1E40AF' }}>Live TV Scoreboard PIN</label>
                   <input
@@ -631,7 +646,7 @@ export default function Admin() {
                   />
                 </div>
                 <div className="field" style={{ margin: 0 }}>
-                  <label style={{ color: '#1E40AF' }}>Cash Settlement Counter PIN</label>
+                  <label style={{ color: '#1E40AF' }}>Cash Settlement PIN</label>
                   <input
                     type="text"
                     maxLength={4}
@@ -641,6 +656,73 @@ export default function Admin() {
                     style={{ fontWeight: 800, letterSpacing: '2px', background: '#FFFFFF', color: '#1D4ED8' }}
                   />
                 </div>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ color: '#1E40AF' }}>VM Checklist PIN</label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={vmChecklistPin}
+                    onChange={(e) => setVmChecklistPin(e.target.value)}
+                    placeholder="e.g. 5678"
+                    style={{ fontWeight: 800, letterSpacing: '2px', background: '#FFFFFF', color: '#1D4ED8' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Feedback Questions Customizer Card */}
+            <div style={{
+              background: '#FFFBEB',
+              border: '1px solid #FCD34D',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <h4 className="outfit" style={{ fontSize: '15px', fontWeight: 700, color: '#B45309', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ❓ Customize Customer Feedback Questions
+              </h4>
+              <p style={{ fontSize: '12px', color: '#92400E', marginBottom: '16px' }}>
+                Edit question titles displayed on customer feedback forms and QR tablets
+              </p>
+
+              <div className="field" style={{ marginBottom: '12px' }}>
+                <label style={{ color: '#B45309' }}>Question 1 (Overall Rating Title)</label>
+                <input
+                  type="text"
+                  value={feedbackQ0Label}
+                  onChange={(e) => setFeedbackQ0Label(e.target.value)}
+                  style={{ background: '#FFFFFF' }}
+                />
+              </div>
+
+              <div className="field" style={{ marginBottom: '12px' }}>
+                <label style={{ color: '#B45309' }}>Question 2 (Recommendation Title)</label>
+                <input
+                  type="text"
+                  value={feedbackQ1Label}
+                  onChange={(e) => setFeedbackQ1Label(e.target.value)}
+                  style={{ background: '#FFFFFF' }}
+                />
+              </div>
+
+              <div className="field" style={{ marginBottom: '12px' }}>
+                <label style={{ color: '#B45309' }}>Question 3 (Staff Assistance & Service)</label>
+                <input
+                  type="text"
+                  value={feedbackQ2Label}
+                  onChange={(e) => setFeedbackQ2Label(e.target.value)}
+                  style={{ background: '#FFFFFF' }}
+                />
+              </div>
+
+              <div className="field" style={{ margin: 0 }}>
+                <label style={{ color: '#B45309' }}>Question 4 (Product Requirements / Voice Note)</label>
+                <input
+                  type="text"
+                  value={feedbackQ3Label}
+                  onChange={(e) => setFeedbackQ3Label(e.target.value)}
+                  style={{ background: '#FFFFFF' }}
+                />
               </div>
             </div>
 

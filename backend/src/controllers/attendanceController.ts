@@ -40,6 +40,27 @@ export const createEmployee = async (req: AuthenticatedRequest, res: Response) =
   }
 };
 
+// 2c. Update Employee Details
+export const updateEmployee = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { empNo, name, department, section, designation, phone } = req.body;
+    if (!empNo || !name) {
+      return res.status(400).json({ ok: false, error: 'Employee No and Name are required.' });
+    }
+
+    await query(
+      `UPDATE Employee SET empNo=?, name=?, department=?, section=?, designation=?, phone=?
+       WHERE id=? AND deleted_at IS NULL`,
+      [empNo, name, department || 'Sales', section || 'Sarees Division', designation || 'Sales Executive', phone || null, id]
+    );
+
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
 // 2b. Bulk Upload Employees (CSV Import)
 export const bulkUploadEmployees = async (req: AuthenticatedRequest, res: Response) => {
   try {

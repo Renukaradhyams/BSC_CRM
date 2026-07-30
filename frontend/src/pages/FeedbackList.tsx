@@ -126,44 +126,90 @@ export default function FeedbackList() {
     window.open(link, '_blank');
   };
 
+  const handleDownloadFeedbackCSV = () => {
+    if (feedbacks.length === 0) return;
+    const headers = "ID,Date,Source,Area,Customer Name,Mobile,Rating (Q0),Recommend (Q1),Customer Voice,Status\n";
+    const rows = feedbacks.map(f => [
+      f.id,
+      `"${f.date || ''}"`,
+      `"${f.source || ''}"`,
+      `"${f.area || ''}"`,
+      `"${(f.custName || '').replace(/"/g, '""')}"`,
+      `"${f.custMobile || ''}"`,
+      `"${(f.q0 || '').replace(/"/g, '""')}"`,
+      `"${(f.q1 || '').replace(/"/g, '""')}"`,
+      `"${(f.yourVoice || '').replace(/"/g, '""')}"`,
+      `"${f.status || ''}"`
+    ].join(',')).join('\n');
+
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Customer_Feedback_Report_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="glass-card fade-in" style={{ padding: '24px' }}>
-      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="page fade-in">
+      <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="serif" style={{ fontSize: '28px' }}>Feedback Portal</h1>
-          <p style={{ fontSize: '14px', color: 'var(--ink-60)' }}>View customer CSI logs and telecaller action queues</p>
+          <h1 className="outfit" style={{ fontSize: '24px', fontWeight: 'bold' }}>Customer Voice & Feedback List</h1>
+          <p style={{ color: 'var(--ink-60)', fontSize: '14px', marginTop: '4px' }}>Review and manage customer feedback records and call follow-up desk</p>
         </div>
 
-        {/* Tab switchers */}
-        <div style={{ display: 'flex', background: 'var(--border-l)', borderRadius: '24px', padding: '4px' }}>
-          <button
-            onClick={() => setActiveTab('all')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '20px',
-              fontSize: '13px',
-              fontWeight: 600,
-              background: activeTab === 'all' ? 'var(--navy)' : 'transparent',
-              color: activeTab === 'all' ? '#fff' : 'var(--ink-60)',
-              transition: 'background 0.15s'
-            }}
-          >
-            📋 All Feedbacks
-          </button>
-          <button
-            onClick={() => setActiveTab('queue')}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '20px',
-              fontSize: '13px',
-              fontWeight: 600,
-              background: activeTab === 'queue' ? 'var(--navy)' : 'transparent',
-              color: activeTab === 'queue' ? '#fff' : 'var(--ink-60)',
-              transition: 'background 0.15s'
-            }}
-          >
-            📞 Call Queue ({queue.length})
-          </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: 'var(--border-l)', borderRadius: '20px', padding: '4px' }}>
+            <button
+              onClick={() => setActiveTab('all')}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: 600,
+                background: activeTab === 'all' ? 'var(--navy)' : 'transparent',
+                color: activeTab === 'all' ? '#fff' : 'var(--ink-60)',
+                transition: 'background 0.15s'
+              }}
+            >
+              📋 All Feedbacks
+            </button>
+            <button
+              onClick={() => setActiveTab('queue')}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: 600,
+                background: activeTab === 'queue' ? 'var(--navy)' : 'transparent',
+                color: activeTab === 'queue' ? '#fff' : 'var(--ink-60)',
+                transition: 'background 0.15s'
+              }}
+            >
+              📞 Call Queue ({queue.length})
+            </button>
+          </div>
+
+          {activeTab === 'all' && (
+            <button
+              onClick={handleDownloadFeedbackCSV}
+              disabled={feedbacks.length === 0}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                background: '#10B981',
+                color: '#FFFFFF',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(16,185,129,0.3)'
+              }}
+            >
+              📥 Export CSV Report
+            </button>
+          )}
         </div>
       </header>
 

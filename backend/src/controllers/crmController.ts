@@ -262,11 +262,17 @@ export const getSettings = async (req: Request, res: Response) => {
 export const updateSettings = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { companyName, companyLogoUrl, operatingStart, operatingEnd,
-      footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin,
+      footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin, vmChecklistPin,
+      feedbackQ0Label, feedbackQ1Label, feedbackQ2Label, feedbackQ3Label,
       allowSelfRegister, defaultRegisterRole, requireAdminApproval } = req.body;
 
     const tvPinVal = tvBoardPin || '9911';
     const cashPinVal = cashSettlementPin || '1234';
+    const vmPinVal = vmChecklistPin || '5678';
+    const q0Val = feedbackQ0Label || 'How was your shopping experience overall?';
+    const q1Val = feedbackQ1Label || 'Would you recommend BSC Belagavi to friends & family?';
+    const q2Val = feedbackQ2Label || 'How satisfied are you with our staff assistance & service?';
+    const q3Val = feedbackQ3Label || 'Any additional comments or product requirements?';
     const allowSelfVal = allowSelfRegister !== undefined ? Boolean(allowSelfRegister) : true;
     const defaultRoleVal = defaultRegisterRole || 'crm_staff';
     const reqApprovalVal = requireAdminApproval !== undefined ? Boolean(requireAdminApproval) : false;
@@ -275,20 +281,24 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
     if (existing) {
       await query(
         `UPDATE Settings SET companyName=?, companyLogoUrl=?, operatingStart=?, operatingEnd=?,
-         footfallGraceMin=?, footfallEditCutoff=?, derEmail=?, tvBoardPin=?, cashSettlementPin=?,
+         footfallGraceMin=?, footfallEditCutoff=?, derEmail=?, tvBoardPin=?, cashSettlementPin=?, vmChecklistPin=?,
+         feedbackQ0Label=?, feedbackQ1Label=?, feedbackQ2Label=?, feedbackQ3Label=?,
          allowSelfRegister=?, defaultRegisterRole=?, requireAdminApproval=? WHERE id=?`,
         [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
-          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal,
+          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal, vmPinVal,
+          q0Val, q1Val, q2Val, q3Val,
           allowSelfVal, defaultRoleVal, reqApprovalVal, existing.id]
       );
     } else {
       await query(
         `INSERT INTO Settings (companyName, companyLogoUrl, operatingStart, operatingEnd,
-           footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin,
+           footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin, vmChecklistPin,
+           feedbackQ0Label, feedbackQ1Label, feedbackQ2Label, feedbackQ3Label,
            allowSelfRegister, defaultRegisterRole, requireAdminApproval, setupComplete)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
         [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
-          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal,
+          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal, vmPinVal,
+          q0Val, q1Val, q2Val, q3Val,
           allowSelfVal, defaultRoleVal, reqApprovalVal]
       );
     }

@@ -41,9 +41,21 @@ export default function Feedback() {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
+        const settingsRes = await api.get('/api/crm/settings');
+        const settings = settingsRes.data?.settings;
+
         const res = await api.get('/api/crm/questions');
         if (res.data && res.data.ok) {
-          const list = res.data.questions || [];
+          let list = res.data.questions || [];
+          if (settings) {
+            list = list.map((q: Question) => {
+              if (q.qId === 'Q0' && settings.feedbackQ0Label) return { ...q, qText: settings.feedbackQ0Label };
+              if (q.qId === 'Q1' && settings.feedbackQ1Label) return { ...q, qText: settings.feedbackQ1Label };
+              if (q.qId === 'Q2' && settings.feedbackQ2Label) return { ...q, qText: settings.feedbackQ2Label };
+              if (q.qId === 'Q3' && settings.feedbackQ3Label) return { ...q, qText: settings.feedbackQ3Label };
+              return q;
+            });
+          }
           setQuestions(list);
 
           // Initialize answer states

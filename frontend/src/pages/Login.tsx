@@ -440,6 +440,10 @@ export default function Login() {
               </button>
             </div>
           )}
+
+          <div style={{ marginTop: '24px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: '#64748B' }}>
+            Designed and Developed by <span style={{ color: '#4F46E5', fontWeight: 800 }}>Renukaradhya M S</span>
+          </div>
         </div>
       </div>
     </div>

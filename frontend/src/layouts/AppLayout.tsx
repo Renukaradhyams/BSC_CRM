@@ -1,7 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+
+interface NotificationItem {
+  id: number;
+  senderName: string;
+  senderRole: string;
+  targetRole: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  created_at: string;
+}
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,7 +29,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
 
-  // Live Clock & Date formatted as "Thu, Jul 30, 2026 04:30:44 PM"
+  // Notification State
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [showNotifDrawer, setShowNotifDrawer] = useState<boolean>(false);
+  const [msgTitle, setMsgTitle] = useState<string>('');
+  const [msgBody, setMsgBody] = useState<string>('');
+  const [targetRole, setTargetRole] = useState<string>('ALL');
+  const [sendingMsg, setSendingMsg] = useState<boolean>(false);
+  const [msgSuccess, setMsgSuccess] = useState<string>('');
+
+  // Live Clock & Date
   useEffect(() => {
     const updateTime = () => {
       const d = new Date();
@@ -43,6 +63,24 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await api.get('/api/notifications');
+      if (res.data?.ok) {
+        setNotifications(res.data.notifications || []);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
   // Fetch divert alerts count
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -64,6 +102,40 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!msgTitle || !msgBody) return;
+
+    try {
+      setSendingMsg(true);
+      setMsgSuccess('');
+      const res = await api.post('/api/notifications', {
+        targetRole,
+        title: msgTitle,
+        message: msgBody
+      });
+      if (res.data?.ok) {
+        setMsgSuccess('Completed: Broadcast message sent successfully!');
+        setMsgTitle('');
+        setMsgBody('');
+        fetchNotifications();
+      }
+    } catch {
+      console.error('Failed to send broadcast notification');
+    } finally {
+      setSendingMsg(false);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const markRead = async () => {
+    try {
+      await api.put('/api/notifications/read');
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch { /* ignore */ }
   };
 
   // Role visibility filter
@@ -110,7 +182,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { id: 'cash-settlement', path: '/app/cash-settlement', label: 'Cash Settlement', icon: '💰' },
         { id: 'vm-checklist', path: '/app/vm-checklist', label: 'VM Checklist', icon: '🏢' },
         { id: 'attendance', path: '/app/attendance', label: 'Staff Attendance', icon: '🗓️' },
-        { id: 'attendance-tv', path: '/app/attendance-tv', label: 'Floor TV Roster', icon: '📺' },
+        { id: 'attendance-tv', path: '/app/attendance-tv', label: 'Floor TV Roster', icon: '📺', openNewTab: true },
         { id: 'tv', path: '/app/tv', label: 'Live TV Display', icon: '📺' }
       ]
     },
@@ -135,6 +207,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
     return 'dashboard';
   };
+
+  const isManagerOrAdmin = ['super_admin', 'admin', 'crm_manager', 'telecaller'].includes(user?.role || '');
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF7F2', position: 'relative', fontFamily: "'Inter', sans-serif" }}>
@@ -219,7 +293,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* Navigation Categories & Links */}
         <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
-          {navCategories.map((cat, cIdx) => {
+          {navCategories.map((cat) => {
             const visibleItems = cat.items.filter(item => showMenu(item.id));
             if (visibleItems.length === 0) return null;
 
@@ -242,7 +316,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   return (
                     <div
                       key={item.id}
-                      onClick={() => navigate(item.path)}
+                      onClick={() => {
+                        if (item.openNewTab) {
+                          window.open(item.path, '_blank');
+                        } else {
+                          navigate(item.path);
+                        }
+                      }}
                       title={collapsed ? item.label : undefined}
                       style={{
                         padding: collapsed ? '12px 0' : '10px 14px',
@@ -251,7 +331,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         fontSize: '13px',
                         fontWeight: active ? 700 : 500,
                         marginBottom: '4px',
-                        background: active ? '#D97706' : 'transparent', // Rich Amber Gold active pill as in user image
+                        background: active ? '#D97706' : 'transparent',
                         color: active ? '#FFFFFF' : '#94A3B8',
                         boxShadow: active ? '0 2px 8px rgba(217, 119, 6, 0.35)' : 'none',
                         display: 'flex',
@@ -318,7 +398,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#FAF7F2' }}>
-        {/* Top Bar matching screenshot */}
+        {/* Top Bar */}
         <header
           style={{
             height: '56px',
@@ -350,20 +430,228 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </h1>
           </div>
 
-          {/* Right Header Live Date/Time Widget */}
+          {/* Right Header Live Date/Time & Notification Bell Widget */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
               <span>{dateStr}</span>
               <span className="mono" style={{ marginLeft: '10px', fontWeight: 700, color: '#0F172A' }}>{timeStr}</span>
             </div>
+
+            {/* Notification Bell Icon */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  setShowNotifDrawer(!showNotifDrawer);
+                  markRead();
+                }}
+                style={{
+                  background: '#FAF7F2',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '10px',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  position: 'relative'
+                }}
+                title="Notifications & Broadcast Messages"
+              >
+                🔔
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: '#EF4444',
+                      color: '#FFFFFF',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
         {/* Viewport Content Container */}
-        <main style={{ flex: 1, overflowY: 'auto', background: '#FAF7F2' }}>
-          {children}
+        <main style={{ flex: 1, overflowY: 'auto', background: '#FAF7F2', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1 }}>
+            {children}
+          </div>
+
+          {/* Right-aligned Developer Credits Footer */}
+          <footer
+            style={{
+              padding: '12px 24px',
+              borderTop: '1px solid #EAE5DC',
+              textAlign: 'right',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#64748B',
+              background: '#FFFFFF'
+            }}
+          >
+            Designed and Developed by <span style={{ color: '#4F46E5', fontWeight: 800 }}>Renukaradhya M S</span>
+          </footer>
         </main>
       </div>
+
+      {/* Slide-Over Notification Drawer Panel */}
+      {showNotifDrawer && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(3px)'
+          }}
+          onClick={() => setShowNotifDrawer(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '380px',
+              maxWidth: '90vw',
+              height: '100%',
+              background: '#FFFFFF',
+              boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '24px'
+            }}
+            className="fade-in"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🔔 Staff Notifications & Broadcasts
+              </h3>
+              <button
+                onClick={() => setShowNotifDrawer(false)}
+                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Broadcast Composer for Managers & Admins */}
+            {isManagerOrAdmin && (
+              <div style={{ background: '#FAF7F2', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ✉️ Send Broadcast Message to Staff
+                </h4>
+
+                {msgSuccess && <div style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginBottom: '8px' }}>{msgSuccess}</div>}
+
+                <form onSubmit={handleSendNotification}>
+                  <div style={{ marginBottom: '8px' }}>
+                    <select
+                      value={targetRole}
+                      onChange={(e) => setTargetRole(e.target.value)}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                    >
+                      <option value="ALL">📢 All Logged-in Staff Users</option>
+                      <option value="crm_manager">👔 CRM Managers</option>
+                      <option value="greeter">👋 Greeters</option>
+                      <option value="telecaller">📞 Telecallers</option>
+                      <option value="crm_staff">👥 CRM Staff</option>
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Message Subject / Title"
+                      value={msgTitle}
+                      onChange={(e) => setMsgTitle(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '10px' }}>
+                    <textarea
+                      placeholder="Type broadcast message details..."
+                      rows={3}
+                      value={msgBody}
+                      onChange={(e) => setMsgBody(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', resize: 'vertical' }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={sendingMsg}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: '#4F46E5',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {sendingMsg ? 'Sending...' : '📤 Send Broadcast'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Notifications Feed List */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {notifications.length > 0 ? (
+                notifications.map(n => (
+                  <div
+                    key={n.id}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{n.title}</span>
+                      <span style={{ fontSize: '10px', color: '#94A3B8' }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 6px 0', lineHeight: 1.4 }}>
+                      {n.message}
+                    </p>
+                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>From: {n.senderName} ({n.senderRole})</span>
+                      <span style={{ color: '#4F46E5', fontWeight: 700 }}>Target: {n.targetRole}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94A3B8', fontSize: '13px' }}>
+                  No broadcasts or notifications yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

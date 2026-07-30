@@ -80,6 +80,49 @@ export default function Attendance() {
   const [submittingEmp, setSubmittingEmp] = useState<boolean>(false);
   const [bulkLoading, setBulkLoading] = useState<boolean>(false);
 
+  // Edit Employee State
+  const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
+  const [editEmpNo, setEditEmpNo] = useState<string>('');
+  const [editName, setEditName] = useState<string>('');
+  const [editDept, setEditDept] = useState<string>('');
+  const [editSection, setEditSection] = useState<string>('');
+  const [editDesig, setEditDesig] = useState<string>('');
+  const [editPhone, setEditPhone] = useState<string>('');
+  const [updatingEmp, setUpdatingEmp] = useState<boolean>(false);
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmp) return;
+
+    try {
+      setUpdatingEmp(true);
+      setError('');
+      setSuccess('');
+
+      const res = await api.put(`/api/attendance/employees/${editingEmp.id}`, {
+        empNo: editEmpNo,
+        name: editName,
+        department: editDept,
+        section: editSection,
+        designation: editDesig,
+        phone: editPhone
+      });
+
+      if (res.data?.ok) {
+        setSuccess(`Completed: Updated employee details for ${editName} (${editEmpNo}).`);
+        setEditingEmp(null);
+        fetchEmployees();
+        fetchAttendance();
+      } else {
+        setError(res.data?.error || 'Failed to update employee details.');
+      }
+    } catch {
+      setError('Error updating employee record.');
+    } finally {
+      setUpdatingEmp(false);
+    }
+  };
+
   const fetchAttendance = useCallback(async () => {
     try {
       setLoading(true);
@@ -818,21 +861,46 @@ export default function Attendance() {
                           {emp.phone || '—'}
                         </td>
                         <td>
-                          <button
-                            onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                            style={{
-                              background: '#FEE2E2',
-                              color: '#EF4444',
-                              border: '1px solid #FCA5A5',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Remove
-                          </button>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={() => {
+                                setEditingEmp(emp);
+                                setEditEmpNo(emp.empNo);
+                                setEditName(emp.name);
+                                setEditDept(emp.department);
+                                setEditSection(emp.section);
+                                setEditDesig(emp.designation);
+                                setEditPhone(emp.phone || '');
+                              }}
+                              style={{
+                                background: '#EEF2FF',
+                                color: '#4F46E5',
+                                border: '1px solid #C7D2FE',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                              style={{
+                                background: '#FEE2E2',
+                                color: '#EF4444',
+                                border: '1px solid #FCA5A5',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -840,6 +908,98 @@ export default function Attendance() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {editingEmp && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(15, 23, 42, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div className="glass-card fade-in" style={{ width: '480px', maxWidth: '100%', padding: '24px', background: '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                ✏️ Edit Employee Details
+              </h3>
+              <button onClick={() => setEditingEmp(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleUpdateEmployee}>
+              <div className="field-row">
+                <div className="field">
+                  <label>Emp No <span className="req">*</span></label>
+                  <input type="text" value={editEmpNo} onChange={(e) => setEditEmpNo(e.target.value)} required />
+                </div>
+                <div className="field">
+                  <label>Employee Name <span className="req">*</span></label>
+                  <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                </div>
+              </div>
+
+              <div className="field-row">
+                <div className="field">
+                  <label>Department</label>
+                  <select value={editDept} onChange={(e) => setEditDept(e.target.value)}>
+                    <option value="Sales">Sales</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Greeter & Helpdesk">Greeter & Helpdesk</option>
+                    <option value="Inventory / Stock">Inventory / Stock</option>
+                    <option value="Management">Management</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Floor / Section</label>
+                  <select value={editSection} onChange={(e) => setEditSection(e.target.value)}>
+                    <option value="Sarees Division">Sarees Division</option>
+                    <option value="Mens Suitings & Wear">Mens Suitings & Wear</option>
+                    <option value="Kids and Toys Section">Kids and Toys Section</option>
+                    <option value="Cash Counter 1">Cash Counter 1</option>
+                    <option value="Cash Counter 2">Cash Counter 2</option>
+                    <option value="Ground Floor">Ground Floor</option>
+                    <option value="First Floor">First Floor</option>
+                    <option value="Second Floor">Second Floor</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="field-row">
+                <div className="field">
+                  <label>Designation</label>
+                  <input type="text" value={editDesig} onChange={(e) => setEditDesig(e.target.value)} required />
+                </div>
+                <div className="field">
+                  <label>Phone Number</label>
+                  <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingEmp(null)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingEmp}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#4F46E5', border: 'none', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {updatingEmp ? 'Saving...' : '💾 Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -16,6 +16,11 @@ export async function initDb() {
     \`derWhatsappNote\` VARCHAR(500) NULL,
     \`tvBoardPin\` VARCHAR(50) DEFAULT '9911',
     \`cashSettlementPin\` VARCHAR(50) DEFAULT '1234',
+    \`vmChecklistPin\` VARCHAR(50) DEFAULT '5678',
+    \`feedbackQ0Label\` VARCHAR(500) DEFAULT 'How was your shopping experience overall?',
+    \`feedbackQ1Label\` VARCHAR(500) DEFAULT 'Would you recommend BSC Belagavi to friends & family?',
+    \`feedbackQ2Label\` VARCHAR(500) DEFAULT 'How satisfied are you with our staff assistance & service?',
+    \`feedbackQ3Label\` VARCHAR(500) DEFAULT 'Any additional comments or product requirements?',
     \`allowSelfRegister\` BOOLEAN DEFAULT TRUE,
     \`defaultRegisterRole\` VARCHAR(50) DEFAULT 'crm_staff',
     \`requireAdminApproval\` BOOLEAN DEFAULT FALSE,
@@ -28,6 +33,11 @@ export async function initDb() {
   // Safe migrations for Settings columns
   try { await query("ALTER TABLE `Settings` ADD COLUMN `tvBoardPin` VARCHAR(50) DEFAULT '9911'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `cashSettlementPin` VARCHAR(50) DEFAULT '1234'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `vmChecklistPin` VARCHAR(50) DEFAULT '5678'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ0Label` VARCHAR(500) DEFAULT 'How was your shopping experience overall?'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ1Label` VARCHAR(500) DEFAULT 'Would you recommend BSC Belagavi to friends & family?'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ2Label` VARCHAR(500) DEFAULT 'How satisfied are you with our staff assistance & service?'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ3Label` VARCHAR(500) DEFAULT 'Any additional comments or product requirements?'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `allowSelfRegister` BOOLEAN DEFAULT TRUE"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `defaultRegisterRole` VARCHAR(50) DEFAULT 'crm_staff'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `requireAdminApproval` BOOLEAN DEFAULT FALSE"); } catch (_) {}
@@ -287,6 +297,18 @@ export async function initDb() {
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  await query(`CREATE TABLE IF NOT EXISTS \`Notification\` (
+    \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+    \`senderId\` INT NULL,
+    \`senderName\` VARCHAR(255) NOT NULL,
+    \`senderRole\` VARCHAR(100) NOT NULL,
+    \`targetRole\` VARCHAR(100) NOT NULL DEFAULT 'ALL',
+    \`title\` VARCHAR(255) NOT NULL,
+    \`message\` TEXT NOT NULL,
+    \`isRead\` BOOLEAN DEFAULT FALSE,
+    \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   await query(`CREATE TABLE IF NOT EXISTS \`Employee\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,
     \`empNo\` VARCHAR(50) UNIQUE NOT NULL,
@@ -428,10 +450,10 @@ async function seedIfEmpty() {
 
   // ── 4. Sections ──────────────────────────────────────────────────────────
   const sections = [
-    ['S1', 'Sarees Division',  'sales',     'Nitin Manager', 'nitin@store.com'],
-    ['S2', 'Mens Suitings',    'sales',     'Sachin PM',     'sachin@store.com'],
-    ['S3', 'Kids Wear',        'sales',     'Anil PM',       'anil@store.com'],
-    ['S4', 'Billing Counter',  'non_sales', null,            null]
+    ['S1', 'Sarees Division',     'sales',     'Nitin Manager', 'nitin@store.com'],
+    ['S2', 'Mens Suitings',       'sales',     'Sachin PM',     'sachin@store.com'],
+    ['S3', 'Kids and Toys Section','sales',    'Anil PM',       'anil@store.com'],
+    ['S4', 'Billing Counter',     'non_sales', null,            null]
   ];
   for (const s of sections) {
     await query(
