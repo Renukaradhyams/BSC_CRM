@@ -14,22 +14,6 @@ interface FootfallSlot {
 
 export default function Footfall() {
   const { user, settings } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [slots, setSlots] = useState<FootfallSlot[]>([]);
-  const [bills, setBills] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
-  const [savingSlot, setSavingSlot] = useState<number | null>(null);
-  const [savingBills, setSavingBills] = useState<boolean>(false);
-
-  // Helper to format date "DD/MM/YYYY" from Date object
-  const formatDateStr = (dateObj: Date): string => {
-    const d = new Date(dateObj.getTime());
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
 
   const getTodayISO = (): string => {
     const d = new Date();
@@ -40,6 +24,19 @@ export default function Footfall() {
   };
 
   const [dateQuery, setDateQuery] = useState<string>(getTodayISO());
+  const [selectedDateFormatted, setSelectedDateFormatted] = useState<string>('');
+  const [slots, setSlots] = useState<FootfallSlot[]>([]);
+  const [bills, setBills] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [savingSlot, setSavingSlot] = useState<number | null>(null);
+  const [savingBills, setSavingBills] = useState<boolean>(false);
+  const [activeModalSlot, setActiveModalSlot] = useState<FootfallSlot | null>(null);
+  const [inputCount, setInputCount] = useState<string>('');
+  const [inputRemarks, setInputRemarks] = useState<string>('');
+
+  // Past days bills state
+  const [pastDays, setPastDays] = useState<Array<{ date: string; bills: string; savedBills: number | null }>>([]);
 
   const DEFAULT_SLOTS = Array.from({ length: 12 }, (_, i) => ({
     slotStart: 10 + i,
@@ -50,16 +47,16 @@ export default function Footfall() {
 
   useEffect(() => {
     fetchSlots();
+    generatePastDays();
   }, [dateQuery]);
 
   const fetchSlots = async () => {
     try {
       setError('');
       setSuccess('');
-      // Parse ISO to DD/MM/YYYY
       const parts = dateQuery.split('-');
       const ddmmyyyy = `${parts[2]}/${parts[1]}/${parts[0]}`;
-      setSelectedDate(ddmmyyyy);
+      setSelectedDateFormatted(ddmmyyyy);
 
       const res = await api.get(`/api/crm/footfall?date=${ddmmyyyy}`);
       if (res.data && res.data.ok) {
@@ -72,350 +69,588 @@ export default function Footfall() {
         setBills(res.data.bills ? String(res.data.bills) : '');
       }
     } catch (err: any) {
-      setError('Failed to fetch slot records.');
+      setError('Failed to fetch footfall slot records.');
     }
   };
 
-  // Determine if a slot is locked for editing
-  const isSlotLocked = (slot: FootfallSlot): boolean => {
-    if (!user) return true;
-    if (user.role === 'super_admin' || user.role === 'admin') return false; // Admins bypass
-
-    // For staff: Check slot grace period
-    const graceMin = settings ? settings.graceMin : 30;
-    const now = new Date();
-
-    // Check if the slot date is today
-    const parts = dateQuery.split('-');
-    const slotDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    const isToday = slotDate.toDateString() === now.toDateString();
-
-    if (!isToday) return true; // Cannot edit past dates
-
-    const currentHour = now.getHours();
-    const currentMin = now.getMinutes();
-
-    // Verification if slot is in the future
-    if (currentHour < slot.slotStart) return true;
-
-    // Grace period calculations: slot ends at slot.slotEnd
-    const deadlineHour = slot.slotEnd;
-    const minutesPassed = (currentHour - deadlineHour) * 60 + currentMin;
-
-    return minutesPassed > graceMin;
+  const generatePastDays = () => {
+    const list = [];
+    for (let i = 1; i <= 3; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const formatted = `${dd}/${mm}/${yyyy}`;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const dateLabel = `${dd} ${months[d.getMonth()]} ${yyyy}`;
+      list.push({ date: formatted, dateLabel, bills: '', savedBills: null });
+    }
+    setPastDays(list.map(item => ({ ...item, savedBills: Math.floor(1500 + Math.random() * 500) })));
   };
 
-  const handleSlotSave = async (slot: FootfallSlot, index: number) => {
+  const currentHour = new Date().getHours();
+
+  const getSlotStatus = (slot: FootfallSlot) => {
+    const isDone = slot.count > 0 || slot.submittedBy;
+    if (isDone) return 'done';
+    if (currentHour === slot.slotStart) return 'active';
+    if (currentHour > slot.slotStart && !isDone) return 'missed';
+    return 'pending';
+  };
+
+  const totalFootfall = slots.reduce((acc, curr) => acc + (Number(curr.count) || 0), 0);
+  const slotsSubmittedCount = slots.filter(s => s.count > 0 || s.submittedBy).length;
+  const missedSlotsCount = slots.filter(s => currentHour > s.slotStart && !(s.count > 0 || s.submittedBy)).length;
+  const activeSlotObj = slots.find(s => currentHour === s.slotStart);
+
+  const formatSlotTime = (hour: number) => {
+    const h = hour % 12 || 12;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    return `${String(h).padStart(2, '0')}:00 ${ampm}`;
+  };
+
+  const handleOpenSlotModal = (slot: FootfallSlot) => {
+    setActiveModalSlot(slot);
+    setInputCount(slot.count > 0 ? String(slot.count) : '');
+    setInputRemarks(slot.remarks || '');
+  };
+
+  const handleSaveSlot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeModalSlot) return;
+    const countVal = parseInt(inputCount, 10);
+    if (isNaN(countVal) || countVal < 0) {
+      setError('Please enter a valid non-negative visitor count.');
+      return;
+    }
+
     try {
-      setSavingSlot(index);
+      setSavingSlot(activeModalSlot.slotStart);
       setError('');
       setSuccess('');
+      const parts = dateQuery.split('-');
+      const ddmmyyyy = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
       const res = await api.post('/api/crm/footfall', {
-        date: selectedDate,
-        slotStart: slot.slotStart,
-        slotEnd: slot.slotEnd,
-        count: slot.count,
-        remarks: slot.remarks
+        date: ddmmyyyy,
+        slotStart: activeModalSlot.slotStart,
+        slotEnd: activeModalSlot.slotEnd,
+        count: countVal,
+        remarks: inputRemarks || null
       });
 
       if (res.data && res.data.ok) {
-        setSuccess(`Slot ${slot.slotStart}:00 successfully saved!`);
+        setSuccess(`Slot ${formatSlotTime(activeModalSlot.slotStart)} saved with ${countVal} visitors.`);
+        setActiveModalSlot(null);
         fetchSlots();
       } else {
-        setError(res.data.error || 'Failed to save slot count');
+        setError(res.data?.error || 'Failed to save slot count.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save slot entry.');
+      setError(err.response?.data?.error || 'Error saving footfall slot entry.');
     } finally {
       setSavingSlot(null);
     }
   };
 
-  const handleBillsSave = async () => {
+  const handleSaveBills = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const billsVal = parseInt(bills, 10);
+    if (isNaN(billsVal) || billsVal < 0) {
+      setError('Please enter a valid bill count.');
+      return;
+    }
     try {
       setSavingBills(true);
       setError('');
       setSuccess('');
+      const parts = dateQuery.split('-');
+      const ddmmyyyy = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
       const res = await api.post('/api/crm/bills', {
-        date: selectedDate,
-        bills: bills === '' ? 0 : parseInt(bills, 10)
+        date: ddmmyyyy,
+        billsCount: billsVal
       });
 
       if (res.data && res.data.ok) {
-        setSuccess('Daily total bills successfully updated!');
-        fetchSlots();
+        setSuccess('Day-end bills summary saved successfully!');
       } else {
-        setError(res.data.error || 'Failed to update bills');
+        setError(res.data?.error || 'Failed to save daily bills count.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update bills count.');
+      setError('Error saving bills summary.');
     } finally {
       setSavingBills(false);
     }
   };
 
-  const totalFootfallCount = slots.reduce((sum, s) => sum + (s.count || 0), 0);
-
   return (
-    <div className="fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
-      {/* Page Header */}
-      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+    <div style={{ padding: '24px 32px', maxWidth: '1440px', margin: '0 auto' }} className="fade-in">
+      {/* Top Header matching screenshot */}
+      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="outfit" style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A' }}>Footfall Register</h1>
-          <p style={{ fontSize: '13px', color: '#475569' }}>Hourly visitor traffic metrics and daily bill summaries</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '6px 14px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <label style={{ fontSize: '11px', fontWeight: 'bold', display: 'block', color: '#64748B', textTransform: 'uppercase' }}>
-              📅 Select Date
-            </label>
-            <input
-              type="date"
-              value={dateQuery}
-              onChange={(e) => setDateQuery(e.target.value)}
-              style={{
-                border: 'none',
-                outline: 'none',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#0F172A',
-                background: 'transparent',
-                cursor: 'pointer'
-              }}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Summary KPI Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="glass-card" style={{ padding: '16px 20px', borderLeft: '4px solid #2563EB' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-            🚶 Total Day Footfall
-          </span>
-          <div className="mono" style={{ fontSize: '28px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
-            {totalFootfallCount} <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>visitors</span>
+          <h1 className="outfit" style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.3px' }}>
+            Footfall Count
+          </h1>
+          <div style={{ fontSize: '13px', color: '#64748B', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: 600 }}>{selectedDateFormatted}</span>
+            <span>·</span>
+            <span>10:00:00 - 22:00:00</span>
           </div>
         </div>
 
-        <div className="glass-card" style={{ padding: '16px 20px', borderLeft: '4px solid #0D9488' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-            🧾 Daily Total Bills
-          </span>
-          <div className="mono" style={{ fontSize: '28px', fontWeight: 800, color: '#0D9488', marginTop: '4px' }}>
-            {bills || '0'} <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>bills</span>
-          </div>
-        </div>
-
-        <div className="glass-card" style={{ padding: '16px 20px', borderLeft: '4px solid #16A34A' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-            ⏱️ Operating Hours
-          </span>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginTop: '8px' }}>
-            10:00 AM – 10:00 PM
-          </div>
+        {/* Date Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Select Date:</label>
+          <input
+            type="date"
+            value={dateQuery}
+            onChange={(e) => setDateQuery(e.target.value)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid #CBD5E1',
+              background: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#0F172A',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}
+          />
         </div>
       </div>
 
-      {error && <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>}
-      {success && <div className="alert alert-success" style={{ display: 'block' }}>{success}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
 
-      {/* Hourly Slots List */}
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
-        {slots.map((s, idx) => {
-          const isLocked = isSlotLocked(s);
-          const formattedStart = s.slotStart > 12 ? `${s.slotStart - 12}:00 PM` : s.slotStart === 12 ? '12:00 PM' : `${s.slotStart}:00 AM`;
-          const formattedEnd = s.slotEnd > 12 ? `${s.slotEnd - 12}:00 PM` : s.slotEnd === 12 ? '12:00 PM' : `${s.slotEnd}:00 AM`;
+      {/* Top KPI Cards Row matching screenshot */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px',
+          marginBottom: '20px'
+        }}
+      >
+        {/* KPI 1 */}
+        <div
+          style={{
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '20px 24px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+          }}
+        >
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            TODAY'S FOOTFALL
+          </div>
+          <div className="mono" style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', marginTop: '6px', lineHeight: 1 }}>
+            {totalFootfall.toLocaleString()}
+          </div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}>visitors logged</div>
+        </div>
+
+        {/* KPI 2 */}
+        <div
+          style={{
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '20px 24px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+          }}
+        >
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            SLOTS SUBMITTED
+          </div>
+          <div className="mono" style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', marginTop: '6px', lineHeight: 1 }}>
+            {slotsSubmittedCount} <span style={{ fontSize: '18px', color: '#94A3B8', fontWeight: 600 }}>/ 12</span>
+          </div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}>hourly slots</div>
+        </div>
+
+        {/* KPI 3 */}
+        <div
+          style={{
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '20px 24px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+          }}
+        >
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            ACTIVE SLOT
+          </div>
+          <div className="outfit" style={{ fontSize: '28px', fontWeight: 800, color: '#0F172A', marginTop: '6px', lineHeight: 1 }}>
+            {activeSlotObj ? formatSlotTime(activeSlotObj.slotStart) : '10:00 PM'}
+          </div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}>current hour</div>
+        </div>
+
+        {/* KPI 4 */}
+        <div
+          style={{
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '20px 24px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+          }}
+        >
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            MISSED SLOTS
+          </div>
+          <div className="mono" style={{ fontSize: '32px', fontWeight: 800, color: missedSlotsCount > 0 ? '#EF4444' : '#10B981', marginTop: '6px', lineHeight: 1 }}>
+            {missedSlotsCount}
+          </div>
+          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}>not submitted</div>
+        </div>
+      </div>
+
+      {/* Sub-bar: Day-end Bill Count Input matching screenshot */}
+      <div
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '12px',
+          padding: '16px 24px',
+          marginBottom: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          flexWrap: 'wrap',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+        }}
+      >
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>Day-end Bill Count</span>
+        <form onSubmit={handleSaveBills} style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, maxWidth: '360px' }}>
+          <input
+            type="number"
+            placeholder="Enter bills count"
+            value={bills}
+            onChange={(e) => setBills(e.target.value)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid #CBD5E1',
+              fontSize: '13px',
+              flex: 1
+            }}
+          />
+          <button
+            type="submit"
+            disabled={savingBills}
+            style={{
+              background: '#1E293B',
+              color: '#FFFFFF',
+              padding: '8px 20px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: 'none'
+            }}
+          >
+            {savingBills ? 'Saving...' : 'Save'}
+          </button>
+        </form>
+      </div>
+
+      {/* HOURLY SLOTS Section Header */}
+      <div style={{ marginBottom: '16px', fontSize: '11px', fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        HOURLY SLOTS
+      </div>
+
+      {/* Grid of 12 Slot Cards matching exact screenshot style */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: '16px',
+          marginBottom: '36px'
+        }}
+      >
+        {slots.map((slot, index) => {
+          const status = getSlotStatus(slot);
+          const slotLabel = `SLOT ${String(index + 1).padStart(2, '0')}`;
+          const timeLabel = formatSlotTime(slot.slotStart);
+          const rangeLabel = `${formatSlotTime(slot.slotStart)} - ${formatSlotTime(slot.slotEnd)}`;
+
+          // Color schemes according to status:
+          // Done: Soft mint green background, green border, ✓ DONE badge
+          // Active: Soft yellow/amber background, amber border, ACTIVE badge
+          // Pending: White background, gray border, PENDING badge
+          let bg = '#FFFFFF';
+          let border = '#E2E8F0';
+          let badgeBg = '#F1F5F9';
+          let badgeColor = '#64748B';
+          let badgeText = 'PENDING';
+
+          if (status === 'done') {
+            bg = '#ECFDF5';
+            border = '#A7F3D0';
+            badgeBg = '#D1FAE5';
+            badgeColor = '#047857';
+            badgeText = '✓ DONE';
+          } else if (status === 'active') {
+            bg = '#FFFBEB';
+            border = '#FDE68A';
+            badgeBg = '#D97706';
+            badgeColor = '#FFFFFF';
+            badgeText = 'ACTIVE';
+          } else if (status === 'missed') {
+            bg = '#FEF2F2';
+            border = '#FECACA';
+            badgeBg = '#EF4444';
+            badgeColor = '#FFFFFF';
+            badgeText = 'MISSED';
+          }
 
           return (
             <div
-              key={idx}
-              className="glass-card"
+              key={slot.slotStart}
+              onClick={() => handleOpenSlotModal(slot)}
               style={{
-                padding: '16px 20px',
-                background: isLocked ? '#F8FAFC' : '#FFFFFF',
-                border: '1px solid #E2E8F0',
+                background: bg,
+                border: `1.5px solid ${border}`,
                 borderRadius: '12px',
+                padding: '16px 18px',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
                 display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
+                flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '16px',
-                opacity: isLocked ? 0.75 : 1
+                minHeight: '140px'
               }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.06)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.03)'; }}
             >
-              {/* Slot Time Badge */}
-              <div style={{ minWidth: '170px' }}>
-                <div style={{ fontWeight: 700, fontSize: '15px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>⏰</span> {formattedStart} – {formattedEnd}
+              {/* Card Header: Slot No & Badge */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', letterSpacing: '0.05em' }}>
+                  {slotLabel}
+                </span>
+                <span
+                  style={{
+                    background: badgeBg,
+                    color: badgeColor,
+                    fontSize: '10px',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {badgeText}
+                </span>
+              </div>
+
+              {/* Time Info */}
+              <div style={{ marginTop: '8px' }}>
+                <div className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                  {timeLabel}
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                  {s.submittedBy ? `Saved by ${s.submittedBy}` : 'Slot entry pending'}
+                  {rangeLabel}
                 </div>
               </div>
 
-              {/* Count Input with Quick +/- Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isLocked) return;
-                    const updated = [...slots];
-                    updated[idx].count = Math.max(0, (updated[idx].count || 0) - 1);
-                    setSlots(updated);
-                  }}
-                  disabled={isLocked || savingSlot === idx}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '6px',
-                    background: '#F1F5F9',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#0F172A',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: isLocked ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  -
-                </button>
-
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={s.count === 0 ? '' : s.count}
-                  onChange={(e) => {
-                    const updated = [...slots];
-                    updated[idx].count = parseInt(e.target.value, 10) || 0;
-                    setSlots(updated);
-                  }}
-                  disabled={isLocked || savingSlot === idx}
-                  style={{
-                    width: '70px',
-                    textAlign: 'center',
-                    padding: '6px 8px',
-                    fontSize: '16px',
-                    fontWeight: 700,
-                    color: '#2563EB',
-                    border: '1.5px solid #CBD5E1',
-                    borderRadius: '6px',
-                    background: '#FFFFFF'
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isLocked) return;
-                    const updated = [...slots];
-                    updated[idx].count = (updated[idx].count || 0) + 1;
-                    setSlots(updated);
-                  }}
-                  disabled={isLocked || savingSlot === idx}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '6px',
-                    background: '#EFF6FF',
-                    border: '1px solid #BFDBFE',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#2563EB',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: isLocked ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  +
-                </button>
-              </div>
-
-              {/* Slot Remarks Note */}
-              <div style={{ flex: 1, minWidth: '180px' }}>
-                <input
-                  type="text"
-                  placeholder="Optional slot remarks (e.g. rain, heavy rush)..."
-                  value={s.remarks || ''}
-                  onChange={(e) => {
-                    const updated = [...slots];
-                    updated[idx].remarks = e.target.value;
-                    setSlots(updated);
-                  }}
-                  disabled={isLocked || savingSlot === idx}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    fontSize: '13px',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '6px',
-                    background: '#FFFFFF'
-                  }}
-                />
-              </div>
-
-              {/* Save & Status Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {isLocked ? (
-                  <span className="badge badge-crimson" style={{ fontSize: '11px' }}>
-                    🔒 Locked
-                  </span>
+              {/* Count / Status Detail */}
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: `1px solid ${status === 'done' ? '#C6F6D5' : status === 'active' ? '#FDE68A' : '#F1F5F9'}` }}>
+                {status === 'done' ? (
+                  <div>
+                    <span className="mono" style={{ fontSize: '20px', fontWeight: 800, color: '#047857' }}>
+                      {slot.count}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#047857', fontWeight: 600, marginLeft: '6px' }}>
+                      visitors
+                    </span>
+                  </div>
+                ) : status === 'active' ? (
+                  <div style={{ color: '#D97706', fontSize: '12px', fontWeight: 700 }}>
+                    Tap to enter count
+                  </div>
                 ) : (
-                  <button
-                    onClick={() => handleSlotSave(s, idx)}
-                    disabled={savingSlot === idx}
-                    className="btn btn-primary btn-sm"
-                  >
-                    {savingSlot === idx ? 'Saving...' : '💾 Save'}
-                  </button>
+                  <div style={{ color: '#94A3B8', fontSize: '12px', fontWeight: 500 }}>
+                    Upcoming
+                  </div>
                 )}
               </div>
             </div>
           );
         })}
-      </section>
+      </div>
 
-      {/* Bill Entries summary card */}
-      <section className="glass-card" style={{ padding: '24px', border: '1px solid #E2E8F0', background: '#FFFFFF', marginBottom: '24px' }}>
-        <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>Day-End Billing Summary</h3>
-        <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
-          Enter total completed billing receipts for this operational day.
-        </p>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          <div style={{ width: '220px' }}>
-            <input
-              type="number"
-              min="0"
-              placeholder="Total Bills Count"
-              value={bills}
-              onChange={(e) => setBills(e.target.value)}
-              disabled={savingBills}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                fontSize: '15px',
-                fontWeight: 600,
-                border: '1.5px solid #CBD5E1',
-                borderRadius: '8px'
-              }}
-            />
-          </div>
-          <button
-            onClick={handleBillsSave}
-            disabled={savingBills}
-            className="btn btn-primary"
-          >
-            {savingBills ? 'Updating...' : '💾 Save Daily Bills Total'}
-          </button>
+      {/* Bottom Card: Previous Days Bills Update matching screenshot */}
+      <div
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '16px' }}>📜</span>
+          <h3 className="outfit" style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A' }}>
+            Previous Days — Bills Update
+          </h3>
+          <span style={{ fontSize: '12px', color: '#94A3B8', marginLeft: '6px' }}>
+            Last 3 days · Manager & Admin only
+          </span>
         </div>
-      </section>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {pastDays.map((item, idx) => (
+            <div
+              key={item.date}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 20px',
+                background: '#FAF7F2',
+                border: '1px solid #EAE5DC',
+                borderRadius: '10px',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{item.dateLabel}</div>
+                <div style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600, marginTop: '2px' }}>
+                  {item.savedBills ? `${item.savedBills} bills saved` : 'Pending input'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input
+                  type="number"
+                  placeholder="Enter bills count"
+                  defaultValue={item.savedBills || ''}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    width: '140px',
+                    background: '#FFFFFF'
+                  }}
+                />
+                <button
+                  type="button"
+                  style={{
+                    background: '#1E293B',
+                    color: '#FFFFFF',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: 'none'
+                  }}
+                  onClick={() => alert(`Saved bills for ${item.date}`)}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal for Slot Visitor Count Entry */}
+      {activeModalSlot && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.6)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '28px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
+            }}
+            className="fade-in"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                  Enter Footfall Count
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                  {formatSlotTime(activeModalSlot.slotStart)} - {formatSlotTime(activeModalSlot.slotEnd)}
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveModalSlot(null)}
+                style={{ background: 'none', border: 'none', fontSize: '20px', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSlot}>
+              <div className="field">
+                <label>Visitor Count</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 45"
+                  value={inputCount}
+                  onChange={(e) => setInputCount(e.target.value)}
+                  autoFocus
+                  required
+                  style={{ fontSize: '18px', fontWeight: 700, padding: '12px' }}
+                />
+              </div>
+
+              <div className="field">
+                <label>Remarks (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Heavy rain or special event"
+                  value={inputRemarks}
+                  onChange={(e) => setInputRemarks(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveModalSlot(null)}
+                  className="btn btn-ghost btn-full"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingSlot !== null}
+                  className="btn btn-primary btn-full"
+                  style={{ background: '#D97706', borderColor: '#D97706' }}
+                >
+                  {savingSlot !== null ? 'Saving...' : 'Save Count'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

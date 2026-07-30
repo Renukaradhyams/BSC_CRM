@@ -21,13 +21,12 @@ export default function Login() {
   const [error, setError] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Greeter specific states
+  // Greeter PIN login states
   const [greeterList, setGreeterList] = useState<GreeterOption[]>([]);
   const [selectedGreeterName, setSelectedGreeterName] = useState<string>('');
   const [greeterPin, setGreeterPin] = useState<string>('');
 
   useEffect(() => {
-    // Fetch greeters for greeter role selection
     fetchGreeters();
   }, []);
 
@@ -56,7 +55,7 @@ export default function Login() {
     const res = await login(username, password);
     setSubmitting(false);
     if (!res.ok) {
-      setError(res.error || 'Invalid credentials. Please try again.');
+      setError(res.error || 'Invalid credentials. Please check your username & password.');
       setPassword('');
     } else {
       navigate('/app');
@@ -65,7 +64,11 @@ export default function Login() {
 
   const handleGreeterPinInput = (num: string) => {
     if (greeterPin.length < 4) {
-      setGreeterPin(prev => prev + num);
+      const newPin = greeterPin + num;
+      setGreeterPin(newPin);
+      if (newPin.length === 4) {
+        handleGreeterSubmit(undefined, newPin);
+      }
     }
   };
 
@@ -73,13 +76,14 @@ export default function Login() {
     setGreeterPin(prev => prev.slice(0, -1));
   };
 
-  const handleGreeterSubmit = async (e?: React.FormEvent) => {
+  const handleGreeterSubmit = async (e?: React.FormEvent, pinToSubmit?: string) => {
     if (e) e.preventDefault();
+    const finalPin = pinToSubmit || greeterPin;
     if (!selectedGreeterName) {
       setError('Please select your greeter name.');
       return;
     }
-    if (greeterPin.length !== 4) {
+    if (finalPin.length !== 4) {
       setError('Please enter your 4-digit PIN.');
       return;
     }
@@ -90,7 +94,7 @@ export default function Login() {
     try {
       const res = await api.post('/api/auth/greeter-login', {
         name: selectedGreeterName,
-        pin: greeterPin
+        pin: finalPin
       });
 
       if (res.data && res.data.ok) {
@@ -100,14 +104,13 @@ export default function Login() {
         if (settingsData) {
           localStorage.setItem('crm_settings', JSON.stringify(settingsData));
         }
-        // Force reload / navigation to greeter tablet view
-        window.location.href = '/app/greeter';
+        window.location.href = '/app/footfall';
       } else {
-        setError(res.data.error || 'Greeter PIN login failed.');
+        setError(res.data?.error || 'Invalid Greeter PIN');
         setGreeterPin('');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to authenticate greeter.');
+      setError(err.response?.data?.error || 'Greeter PIN login failed.');
       setGreeterPin('');
     } finally {
       setSubmitting(false);
@@ -115,297 +118,327 @@ export default function Login() {
   };
 
   return (
-    <div className="page fade-in">
-      <div 
-        className="card" 
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#FAF7F2',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        fontFamily: "'Inter', sans-serif"
+      }}
+    >
+      <div
         style={{
-          maxWidth: '960px',
+          width: '100%',
+          maxWidth: '1020px',
+          background: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1px solid #EAE5DC',
+          boxShadow: '0 20px 40px -15px rgba(0,0,0,0.07)',
+          overflow: 'hidden',
           display: 'grid',
-          gridTemplateColumns: '1fr 1.2fr',
-          minHeight: '620px',
-          background: '#121626',
-          border: '1px solid rgba(255,255,255,0.08)'
+          gridTemplateColumns: '1fr 1fr',
+          minHeight: '620px'
         }}
+        className="fade-in"
       >
-        {/* Left Brand Showcase Panel */}
-        <div 
+        {/* Left Side: Brand Banner */}
+        <div
           style={{
-            background: 'linear-gradient(145deg, #0F172A 0%, #1E293B 100%)',
-            padding: '44px 36px',
+            background: 'linear-gradient(145deg, #1A233D 0%, #0F172A 100%)',
+            padding: '48px 40px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            borderRight: '1px solid #E2E8F0',
-            position: 'relative',
-            overflow: 'hidden'
+            color: '#FFFFFF',
+            position: 'relative'
           }}
         >
-          {/* Ambient Accent Glow */}
-          <div 
-            style={{
-              position: 'absolute',
-              top: '-80px',
-              left: '-80px',
-              width: '240px',
-              height: '240px',
-              background: 'radial-gradient(circle, rgba(37,99,235,0.2) 0%, rgba(0,0,0,0) 70%)',
-              pointerEvents: 'none'
-            }}
-          />
-
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '32px' }}>
-              <div 
-                style={{
-                  width: '50px',
-                  height: '50px',
-                  background: '#FFFFFF',
-                  borderRadius: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                  padding: '4px'
-                }}
-              >
-                <img 
-                  src={settings?.companyLogoUrl || 'https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg'} 
-                  alt="Logo"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '10px' }}
-                />
-              </div>
-              <div>
-                <h1 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
-                  {settings?.companyName || 'BSC Textiles'}
-                </h1>
-                <p style={{ fontSize: '11px', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '3px', fontWeight: 600 }}>
-                  Retail Management CRM
-                </p>
-              </div>
+            {/* Logo pill */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '12px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '12px',
+                padding: '8px 16px',
+                marginBottom: '32px'
+              }}
+            >
+              <img
+                src={settings?.companyLogoUrl || 'https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg'}
+                alt="BSC Logo"
+                style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain', background: '#FFFFFF' }}
+              />
+              <span className="outfit" style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF' }}>
+                {settings?.companyName || 'BSC THE TEXTILE MALL'}
+              </span>
             </div>
 
-            <div style={{ marginTop: '40px' }}>
-              <h2 className="outfit" style={{ fontSize: '26px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.25, marginBottom: '12px' }}>
-                Store Operations & Experience Portal
-              </h2>
-              <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6 }}>
-                Unified intelligence for footfalls, customer satisfaction, sourcing diverts, and store visual merchandising.
-              </p>
-            </div>
+            <h1 className="outfit" style={{ fontSize: '32px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.25, letterSpacing: '-0.5px' }}>
+              Retail Operations & Customer Relationship Portal
+            </h1>
+
+            <p style={{ fontSize: '14px', color: '#94A3B8', marginTop: '16px', lineHeight: 1.6 }}>
+              Streamlined footfall tracking, customer satisfaction telemetry, store diverts management, and daily cash settlements.
+            </p>
           </div>
 
-          {/* Quick Info Badges */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
-              <span style={{ color: '#60A5FA', fontSize: '16px' }}>✨</span>
-              <span>Tablet-ready hourly footfall & feedback capture</span>
+          {/* Bottom Banner Status */}
+          <div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '10px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Version</div>
+                <div style={{ fontSize: '12px', color: '#FFFFFF', fontWeight: 600, marginTop: '2px' }}>v2.4 CRM Core</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.06)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '10px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Status</div>
+                <div style={{ fontSize: '12px', color: '#34D399', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>●</span> Operational
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#CBD5E1' }}>
-              <span style={{ color: '#34D399', fontSize: '16px' }}>🛡️</span>
-              <span>Encrypted multi-role access control</span>
+
+            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '20px' }}>
+              © {new Date().getFullYear()} BSC Textiles Belagavi. All rights reserved.
             </div>
           </div>
         </div>
 
-        {/* Right Form Panel */}
-        <div style={{ padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#FFFFFF' }}>
-          <h2 className="outfit" style={{ fontSize: '24px', fontWeight: 700, color: '#0F172A', marginBottom: '6px' }}>
-            Sign In to Portal
-          </h2>
-          <p style={{ fontSize: '13px', color: '#475569', marginBottom: '24px' }}>
-            Select your staff role to open your portal workspace
-          </p>
+        {/* Right Side: Login Form */}
+        <div style={{ padding: '44px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <h2 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A' }}>
+              Sign In to Your Workspace
+            </h2>
+            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+              Select your role category to log into the CRM system
+            </p>
+          </div>
 
-          {/* Role Selector Grid */}
-          <div 
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '8px',
-              marginBottom: '24px',
-              background: '#F1F5F9',
-              padding: '6px',
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0'
-            }}
-          >
+          {/* Role Navigation Pills matching screenshot style */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '24px' }}>
             {[
-              { id: 'admin', label: 'Admin', icon: '🛡️' },
-              { id: 'crm', label: 'CRM', icon: '📊' },
-              { id: 'greeter', label: 'Greeter', icon: '🚶' },
-              { id: 'telecaller', label: 'Telecaller', icon: '📞' }
+              { id: 'admin', label: '🛡️ Manager / Admin' },
+              { id: 'crm', label: '📊 CRM Staff' },
+              { id: 'greeter', label: '🚶 Greeter PIN' },
+              { id: 'telecaller', label: '📞 Telecaller' }
             ].map(role => (
               <button
                 key={role.id}
-                type="button"
                 onClick={() => {
                   setSelectedRole(role.id as LoginRole);
                   setError('');
+                  if (role.id === 'admin') setUsername('admin@store.com');
+                  else if (role.id === 'crm') setUsername('crm@store.com');
+                  else if (role.id === 'telecaller') setUsername('telecaller@store.com');
                 }}
                 style={{
-                  padding: '10px 6px',
+                  padding: '9px 12px',
                   borderRadius: '8px',
                   fontSize: '12px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px',
-                  background: selectedRole === role.id ? '#2563EB' : 'transparent',
+                  fontWeight: selectedRole === role.id ? 700 : 500,
+                  background: selectedRole === role.id ? '#D97706' : '#FAF7F2',
                   color: selectedRole === role.id ? '#FFFFFF' : '#475569',
-                  boxShadow: selectedRole === role.id ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
-                  transition: 'all 0.2s ease'
+                  border: selectedRole === role.id ? 'none' : '1px solid #EAE5DC',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <span style={{ fontSize: '18px' }}>{role.icon}</span>
-                <span>{role.label}</span>
+                {role.label}
               </button>
             ))}
           </div>
 
           {error && <div className="alert alert-error">{error}</div>}
 
-          {/* Role 1, 2, 4: Standard Email/Username + Password Login Form */}
-          {selectedRole !== 'greeter' && (
-            <form onSubmit={handleSubmitStandard} className="fade-in">
+          {/* STANDARD PASSWORD LOGIN FORM */}
+          {selectedRole !== 'greeter' ? (
+            <form onSubmit={handleSubmitStandard}>
               <div className="field">
-                <label htmlFor="username">Email / Username</label>
+                <label>Email Address / Username</label>
                 <input
-                  id="username"
                   type="text"
-                  placeholder={
-                    selectedRole === 'admin' ? 'admin@store.com' :
-                    selectedRole === 'crm' ? 'crm@store.com' : 'tele@store.com'
-                  }
+                  placeholder="name@bsctextiles.com"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  disabled={submitting}
+                  required
                 />
               </div>
 
               <div className="field">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label htmlFor="password" style={{ margin: 0 }}>Password</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+                  <label style={{ margin: 0 }}>Password</label>
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ background: 'none', border: 0, color: 'var(--text-gold)', fontSize: '12px', cursor: 'pointer' }}
+                    style={{ background: 'none', border: 'none', fontSize: '11px', color: '#4F46E5', fontWeight: 600, cursor: 'pointer' }}
                   >
-                    {showPassword ? '🙈 Hide' : '👁️ Show'}
+                    {showPassword ? 'Hide Password' : 'Show Password'}
                   </button>
                 </div>
                 <input
-                  id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={submitting}
+                  required
                 />
               </div>
 
               <button
                 type="submit"
-                className="btn btn-primary btn-full"
                 disabled={submitting}
-                style={{ marginTop: '10px' }}
+                className="btn btn-primary btn-full btn-lg"
+                style={{ background: '#1E293B', borderColor: '#1E293B', marginTop: '12px' }}
               >
-                {submitting ? <span className="spinner"></span> : `Sign In as ${selectedRole.toUpperCase()}`}
+                {submitting ? 'Authenticating...' : 'Sign In →'}
               </button>
             </form>
-          )}
-
-          {/* Role 3: Store Greeter Tablet PIN Pad Login */}
-          {selectedRole === 'greeter' && (
-            <form onSubmit={handleGreeterSubmit} className="fade-in">
+          ) : (
+            /* GREETER TABLET PIN LOGIN FORM */
+            <div>
               <div className="field">
                 <label>Select Greeter Staff</label>
                 <select
                   value={selectedGreeterName}
                   onChange={(e) => setSelectedGreeterName(e.target.value)}
-                  disabled={submitting}
                 >
-                  {greeterList.length === 0 ? (
-                    <option value="">No greeter users found</option>
-                  ) : (
+                  {greeterList.length > 0 ? (
                     greeterList.map(g => (
                       <option key={g.id} value={g.name}>{g.name}</option>
                     ))
+                  ) : (
+                    <option value="">No greeters found</option>
                   )}
                 </select>
               </div>
 
-              {/* PIN Display Dots */}
-              <div className="field" style={{ textAlign: 'center' }}>
-                <label>Enter 4-Digit Greeter PIN</label>
-                <div 
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    margin: '12px 0'
-                  }}
-                >
-                  {[0, 1, 2, 3].map(idx => (
+              {/* Visual PIN Dots Display */}
+              <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '12px' }}>
+                  ENTER 4-DIGIT PIN
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '14px' }}>
+                  {[0, 1, 2, 3].map(i => (
                     <div
-                      key={idx}
+                      key={i}
                       style={{
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        border: '2px solid var(--gold)',
-                        background: greeterPin.length > idx ? 'var(--gold)' : 'transparent',
-                        transition: 'all 0.15s ease',
-                        boxShadow: greeterPin.length > idx ? '0 0 10px rgba(245,200,66,0.5)' : 'none'
+                        width: '42px',
+                        height: '48px',
+                        borderRadius: '10px',
+                        border: '2px solid #CBD5E1',
+                        background: i < greeterPin.length ? '#D97706' : '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px',
+                        fontWeight: 800,
+                        color: '#FFFFFF',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
                       }}
-                    />
+                    >
+                      {i < greeterPin.length ? '●' : ''}
+                    </div>
                   ))}
                 </div>
               </div>
 
-              {/* Numeric Tactile PIN Pad */}
-              <div 
+              {/* Circular Keypad for Touch Tablets */}
+              <div
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '10px',
+                  gap: '12px',
                   maxWidth: '280px',
-                  margin: '0 auto 20px'
+                  margin: '0 auto 16px auto'
                 }}
               >
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map(num => (
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
                   <button
                     key={num}
                     type="button"
-                    onClick={() => {
-                      if (num === 'C') setGreeterPin('');
-                      else if (num === '⌫') handleGreeterPinBackspace();
-                      else handleGreeterPinInput(num);
-                    }}
+                    onClick={() => handleGreeterPinInput(num)}
                     style={{
-                      height: '46px',
+                      height: '52px',
                       borderRadius: '12px',
-                      background: num === 'C' || num === '⌫' ? 'rgba(255,255,255,0.06)' : 'rgba(245,200,66,0.1)',
-                      color: num === 'C' || num === '⌫' ? 'var(--text-muted)' : 'var(--text-gold)',
-                      border: '1px solid rgba(245,200,66,0.2)',
+                      background: '#FAF7F2',
+                      border: '1px solid #EAE5DC',
                       fontSize: '18px',
-                      fontWeight: 700,
+                      fontWeight: 800,
+                      color: '#0F172A',
                       cursor: 'pointer'
                     }}
                   >
                     {num}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => setGreeterPin('')}
+                  style={{
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: '#FEE2E2',
+                    border: '1px solid #FCA5A5',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#EF4444',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGreeterPinInput('0')}
+                  style={{
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: '#FAF7F2',
+                    border: '1px solid #EAE5DC',
+                    fontSize: '18px',
+                    fontWeight: 800,
+                    color: '#0F172A',
+                    cursor: 'pointer'
+                  }}
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGreeterPinBackspace}
+                  style={{
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: '#F1F5F9',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⌫
+                </button>
               </div>
 
               <button
-                type="submit"
-                className="btn btn-teal btn-full"
-                disabled={submitting || greeterPin.length !== 4}
+                type="button"
+                onClick={() => handleGreeterSubmit()}
+                disabled={greeterPin.length !== 4 || submitting}
+                className="btn btn-primary btn-full btn-lg"
+                style={{ background: '#D97706', borderColor: '#D97706' }}
               >
-                {submitting ? <span className="spinner"></span> : '🚀 Open Greeter Tablet Portal'}
+                {submitting ? 'Verifying PIN...' : 'Login as Greeter →'}
               </button>
-            </form>
+            </div>
           )}
         </div>
       </div>
