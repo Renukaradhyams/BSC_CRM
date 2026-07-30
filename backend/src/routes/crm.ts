@@ -1,5 +1,5 @@
 import express from 'express';
-import { getDashboard, getFootfall, saveFootfall, saveDailyBills, getFeedbackQuestions, saveFeedback, getCallQueue, updateCallStatus, getDiverts, createDivert, updateDivert, getDivertReasons, sendDER, getSettings, updateSettings, getSections, getUsers, createUser, createSection, deleteSection, resetUserPassword, getGreeters, getReports, getAdminAuditLog } from '../controllers/crmController';
+import { getDashboard, getFootfall, saveFootfall, saveDailyBills, getFeedbackQuestions, saveFeedback, getAllFeedbacks, getCallQueue, updateCallStatus, getDiverts, createDivert, updateDivert, getDivertReasons, sendDER, getSettings, updateSettings, getSections, getUsers, createUser, createSection, deleteSection, resetUserPassword, getGreeters, getReports, getAdminAuditLog } from '../controllers/crmController';
 import { authenticateJWT, authorizeRoles, authenticateTV } from '../middleware/auth';
 
 const router = express.Router();
@@ -15,6 +15,7 @@ router.post('/bills', authenticateJWT, saveDailyBills);
 
 // Customer feedback routing
 router.get('/questions', getFeedbackQuestions);
+router.get('/feedbacks', authenticateJWT, getAllFeedbacks);
 router.post('/feedback', authenticateJWT, saveFeedback);
 router.post('/feedback/public', saveFeedback); // Public QR submission is unsecured
 

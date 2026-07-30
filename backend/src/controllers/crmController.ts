@@ -262,26 +262,34 @@ export const getSettings = async (req: Request, res: Response) => {
 export const updateSettings = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { companyName, companyLogoUrl, operatingStart, operatingEnd,
-      footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin } = req.body;
+      footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin,
+      allowSelfRegister, defaultRegisterRole, requireAdminApproval } = req.body;
 
     const tvPinVal = tvBoardPin || '9911';
     const cashPinVal = cashSettlementPin || '1234';
+    const allowSelfVal = allowSelfRegister !== undefined ? Boolean(allowSelfRegister) : true;
+    const defaultRoleVal = defaultRegisterRole || 'crm_staff';
+    const reqApprovalVal = requireAdminApproval !== undefined ? Boolean(requireAdminApproval) : false;
 
     const [existing] = await query('SELECT id FROM Settings WHERE deleted_at IS NULL LIMIT 1');
     if (existing) {
       await query(
         `UPDATE Settings SET companyName=?, companyLogoUrl=?, operatingStart=?, operatingEnd=?,
-         footfallGraceMin=?, footfallEditCutoff=?, derEmail=?, tvBoardPin=?, cashSettlementPin=? WHERE id=?`,
+         footfallGraceMin=?, footfallEditCutoff=?, derEmail=?, tvBoardPin=?, cashSettlementPin=?,
+         allowSelfRegister=?, defaultRegisterRole=?, requireAdminApproval=? WHERE id=?`,
         [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
-          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal, existing.id]
+          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal,
+          allowSelfVal, defaultRoleVal, reqApprovalVal, existing.id]
       );
     } else {
       await query(
         `INSERT INTO Settings (companyName, companyLogoUrl, operatingStart, operatingEnd,
-           footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin, setupComplete)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
+           footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin,
+           allowSelfRegister, defaultRegisterRole, requireAdminApproval, setupComplete)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
         [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
-          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal]
+          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal,
+          allowSelfVal, defaultRoleVal, reqApprovalVal]
       );
     }
     await logAdminAction(
@@ -291,6 +299,18 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
     );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+
+// 14b. Get All Feedbacks
+export const getAllFeedbacks = async (req: Request, res: Response) => {
+  try {
+    const feedbacks = await query(
+      'SELECT * FROM Feedback WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 200'
+    );
+    return res.json({ ok: true, feedbacks });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
 };
 
 // 15. Get Sections

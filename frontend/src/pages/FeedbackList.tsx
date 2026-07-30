@@ -58,11 +58,8 @@ export default function FeedbackList() {
       setSuccess('');
 
       if (activeTab === 'all') {
-        const res = await api.get('/api/crm/dashboard');
+        const res = await api.get('/api/crm/feedbacks');
         if (res.data && res.data.ok) {
-          // Fetch feedbacks list from dashboard mock aggregation
-          // In production this fetches feedbacks table
-          const listRes = await api.get('/api/crm/divert'); // fallback list or dashboard mock
           setFeedbacks(res.data.feedbacks || []);
         }
       } else {

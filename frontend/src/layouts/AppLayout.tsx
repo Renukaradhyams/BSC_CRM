@@ -88,7 +88,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'vm-checklist':
         return ['crm_manager', 'vm'].includes(role);
       case 'attendance':
-        return ['crm_manager', 'admin', 'super_admin', 'hr', 'greeter'].includes(role);
+      case 'attendance-tv':
+        return ['crm_manager', 'admin', 'super_admin', 'hr', 'greeter', 'crm_staff'].includes(role);
       case 'admin':
         return false;
       default:
@@ -109,6 +110,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { id: 'cash-settlement', path: '/app/cash-settlement', label: 'Cash Settlement', icon: '💰' },
         { id: 'vm-checklist', path: '/app/vm-checklist', label: 'VM Checklist', icon: '🏢' },
         { id: 'attendance', path: '/app/attendance', label: 'Staff Attendance', icon: '🗓️' },
+        { id: 'attendance-tv', path: '/app/attendance-tv', label: 'Floor TV Roster', icon: '📺' },
         { id: 'tv', path: '/app/tv', label: 'Live TV Display', icon: '📺' }
       ]
     },

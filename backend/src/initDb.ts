@@ -16,15 +16,21 @@ export async function initDb() {
     \`derWhatsappNote\` VARCHAR(500) NULL,
     \`tvBoardPin\` VARCHAR(50) DEFAULT '9911',
     \`cashSettlementPin\` VARCHAR(50) DEFAULT '1234',
+    \`allowSelfRegister\` BOOLEAN DEFAULT TRUE,
+    \`defaultRegisterRole\` VARCHAR(50) DEFAULT 'crm_staff',
+    \`requireAdminApproval\` BOOLEAN DEFAULT FALSE,
     \`setupComplete\` BOOLEAN DEFAULT FALSE,
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     \`deleted_at\` TIMESTAMP NULL
   )`);
 
-  // Safe migrations for Settings PIN columns
+  // Safe migrations for Settings columns
   try { await query("ALTER TABLE `Settings` ADD COLUMN `tvBoardPin` VARCHAR(50) DEFAULT '9911'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `cashSettlementPin` VARCHAR(50) DEFAULT '1234'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `allowSelfRegister` BOOLEAN DEFAULT TRUE"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `defaultRegisterRole` VARCHAR(50) DEFAULT 'crm_staff'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `requireAdminApproval` BOOLEAN DEFAULT FALSE"); } catch (_) {}
 
   await query(`CREATE TABLE IF NOT EXISTS \`User\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,

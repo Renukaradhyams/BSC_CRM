@@ -40,6 +40,50 @@ export const createEmployee = async (req: AuthenticatedRequest, res: Response) =
   }
 };
 
+// 2b. Bulk Upload Employees (CSV Import)
+export const bulkUploadEmployees = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { employees } = req.body;
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({ ok: false, error: 'No employee records provided for bulk upload.' });
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const emp of employees) {
+      const { empNo, name, department, section, designation, phone } = emp;
+      if (!empNo || !name) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        await query(
+          `INSERT INTO Employee (empNo, name, department, section, designation, phone)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE 
+            name = VALUES(name),
+            department = VALUES(department),
+            section = VALUES(section),
+            designation = VALUES(designation),
+            phone = VALUES(phone),
+            isActive = TRUE,
+            deleted_at = NULL`,
+          [empNo, name, department || 'General', section || 'Main Floor', designation || 'Staff', phone || null]
+        );
+        inserted++;
+      } catch (err) {
+        skipped++;
+      }
+    }
+
+    return res.json({ ok: true, inserted, skipped, total: employees.length });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
 // 3. Delete Employee
 export const deleteEmployee = async (req: AuthenticatedRequest, res: Response) => {
   try {

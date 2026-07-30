@@ -39,6 +39,9 @@ export default function Admin() {
   // Visible Passwords reveal state: set of user IDs whose credentials are password-unmasked
   const [revealedUsers, setRevealedUsers] = useState<Set<number>>(new Set());
 
+  // User Search & Filter state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   // Company Settings form state
   const [companyName, setCompanyName] = useState<string>('');
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
@@ -49,6 +52,9 @@ export default function Admin() {
   const [derEmail, setDerEmail] = useState<string>('');
   const [tvBoardPin, setTvBoardPin] = useState<string>('9911');
   const [cashSettlementPin, setCashSettlementPin] = useState<string>('1234');
+  const [allowSelfRegister, setAllowSelfRegister] = useState<boolean>(true);
+  const [defaultRegisterRole, setDefaultRegisterRole] = useState<string>('crm_staff');
+  const [requireAdminApproval, setRequireAdminApproval] = useState<boolean>(false);
 
   // New User form state
   const [newUserName, setNewUserName] = useState<string>('');
@@ -98,6 +104,9 @@ export default function Admin() {
         setDerEmail(s.derEmail || '');
         setTvBoardPin(s.tvBoardPin || '9911');
         setCashSettlementPin(s.cashSettlementPin || '1234');
+        setAllowSelfRegister(s.allowSelfRegister !== undefined ? Boolean(s.allowSelfRegister) : true);
+        setDefaultRegisterRole(s.defaultRegisterRole || 'crm_staff');
+        setRequireAdminApproval(s.requireAdminApproval !== undefined ? Boolean(s.requireAdminApproval) : false);
       }
     } catch (err) {
       setError('Failed to fetch registry lists.');
@@ -138,14 +147,19 @@ export default function Admin() {
         footfallEditCutoff: editCutoff,
         derEmail,
         tvBoardPin,
-        cashSettlementPin
+        cashSettlementPin,
+        allowSelfRegister,
+        defaultRegisterRole,
+        requireAdminApproval
       });
       if (res.data && res.data.ok) {
-        setSuccess('Company profile parameters saved successfully!');
+        setSuccess('Completed: Store profile parameters and registration policies saved successfully!');
         checkSetupStatus();
+      } else {
+        setError(res.data?.error || 'Failed to save settings.');
       }
-    } catch (err) {
-      setError('Failed to save store configurations.');
+    } catch (err: any) {
+      setError('Error updating company parameters.');
     }
   };
 
@@ -309,23 +323,51 @@ export default function Admin() {
           <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px', alignItems: 'start' }}>
             {/* User List Table with Credential Vault */}
             <div className="glass-card" style={{ padding: '24px' }}>
-              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>
-                🔑 Staff Credential Vault
-              </h3>
-            <div className="data-table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>User Name</th>
-                    <th>Role</th>
-                    <th>Email / Username</th>
-                    <th>Password</th>
-                    <th>4-Digit PIN</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => {
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
+                  🔑 Staff Credential Vault
+                </h3>
+
+                {/* Instant Staff Search Bar */}
+                <input
+                  type="text"
+                  placeholder="🔍 Search users by name, email, role..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    width: '260px',
+                    background: '#FFFFFF'
+                  }}
+                />
+              </div>
+
+              <div className="data-table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>User Name</th>
+                      <th>Role</th>
+                      <th>Email / Username</th>
+                      <th>Password</th>
+                      <th>4-Digit PIN</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(searchQuery.trim() === ''
+                      ? users
+                      : users.filter(u =>
+                          u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (u.sectionsAssigned && u.sectionsAssigned.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (u.pin && u.pin.includes(searchQuery))
+                        )
+                    ).map(u => {
                     const isRevealed = revealedUsers.has(u.id);
                     return (
                       <tr key={u.id}>
@@ -599,6 +641,63 @@ export default function Admin() {
                     style={{ fontWeight: 800, letterSpacing: '2px', background: '#FFFFFF', color: '#1D4ED8' }}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* New User Registration & Onboarding Settings Card */}
+            <div style={{
+              background: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              borderRadius: '12px',
+              padding: '20px',
+              marginBottom: '24px'
+            }}>
+              <h4 className="outfit" style={{ fontSize: '15px', fontWeight: 700, color: '#047857', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📝 New Staff Registration & Self-Onboarding Policy
+              </h4>
+              <p style={{ fontSize: '12px', color: '#065F46', marginBottom: '16px' }}>
+                Manage self-registration rules, default onboarding role, and admin verification
+              </p>
+
+              <div className="field-row" style={{ marginBottom: '14px' }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ color: '#047857' }}>Allow New Staff Self-Registration</label>
+                  <select
+                    value={allowSelfRegister ? 'true' : 'false'}
+                    onChange={(e) => setAllowSelfRegister(e.target.value === 'true')}
+                    style={{ background: '#FFFFFF', fontWeight: 700, color: '#047857' }}
+                  >
+                    <option value="true">Enabled (Allow self signup)</option>
+                    <option value="false">Disabled (Admin creation only)</option>
+                  </select>
+                </div>
+
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ color: '#047857' }}>Default Role for New Register</label>
+                  <select
+                    value={defaultRegisterRole}
+                    onChange={(e) => setDefaultRegisterRole(e.target.value)}
+                    style={{ background: '#FFFFFF', fontWeight: 700, color: '#047857' }}
+                  >
+                    <option value="crm_staff">CRM Staff</option>
+                    <option value="telecaller">Telecaller</option>
+                    <option value="greeter">Greeter</option>
+                    <option value="vm">VM Executive</option>
+                    <option value="purchase_manager">Purchase Manager</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="field" style={{ margin: 0 }}>
+                <label style={{ color: '#047857' }}>Require Admin Verification for New Accounts</label>
+                <select
+                  value={requireAdminApproval ? 'true' : 'false'}
+                  onChange={(e) => setRequireAdminApproval(e.target.value === 'true')}
+                  style={{ background: '#FFFFFF', fontWeight: 700, color: '#047857' }}
+                >
+                  <option value="false">No (Instant Activation)</option>
+                  <option value="true">Yes (Require Admin Approval)</option>
+                </select>
               </div>
             </div>
 

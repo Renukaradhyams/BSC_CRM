@@ -62,13 +62,14 @@ export default function Attendance() {
 
   // Register State
   const [selectedDateInput, setSelectedDateInput] = useState<string>(formatDateInput(today));
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>('ALL');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [savingEmpId, setSavingEmpId] = useState<number | null>(null);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
-  // Employee Form State
+  // Employee Form & Bulk State
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [empNo, setEmpNo] = useState<string>('');
   const [empName, setEmpName] = useState<string>('');
@@ -77,6 +78,7 @@ export default function Attendance() {
   const [designation, setDesignation] = useState<string>('Sales Executive');
   const [phone, setPhone] = useState<string>('');
   const [submittingEmp, setSubmittingEmp] = useState<boolean>(false);
+  const [bulkLoading, setBulkLoading] = useState<boolean>(false);
 
   const fetchAttendance = useCallback(async () => {
     try {
@@ -117,13 +119,18 @@ export default function Attendance() {
     }
   }, [activeTab, fetchEmployees]);
 
+  // Filtered records by floor/section
+  const filteredRecords = selectedSectionFilter === 'ALL'
+    ? records
+    : records.filter(r => r.section.toLowerCase().includes(selectedSectionFilter.toLowerCase()) || r.department.toLowerCase().includes(selectedSectionFilter.toLowerCase()));
+
   // Calculate stats
   const stats = {
-    total: records.length,
-    present: records.filter(r => r.status === 'present').length,
-    absent: records.filter(r => r.status === 'absent').length,
-    late: records.filter(r => r.status === 'late').length,
-    leave: records.filter(r => r.status === 'leave').length,
+    total: filteredRecords.length,
+    present: filteredRecords.filter(r => r.status === 'present').length,
+    absent: filteredRecords.filter(r => r.status === 'absent').length,
+    late: filteredRecords.filter(r => r.status === 'late').length,
+    leave: filteredRecords.filter(r => r.status === 'leave').length,
   };
 
   const handleRowStatusChange = (empId: number, field: string, val: any) => {
@@ -142,7 +149,6 @@ export default function Attendance() {
       setSuccess('');
       const apiDate = inputToApi(selectedDateInput);
 
-      // Compute worked minutes if checkIn and checkOut are provided
       let workedMin = record.workedMinutes || 0;
       if (record.checkIn && record.checkOut) {
         const [inH, inM] = record.checkIn.split(':').map(Number);
@@ -164,7 +170,7 @@ export default function Attendance() {
       });
 
       if (res.data?.ok) {
-        setSuccess(`Attendance updated for ${record.userName}.`);
+        setSuccess(`Completed: Attendance record saved for ${record.userName}.`);
         fetchAttendance();
       } else {
         setError(res.data?.error || 'Failed to update attendance.');
@@ -198,7 +204,7 @@ export default function Attendance() {
       });
 
       if (res.data?.ok) {
-        setSuccess(`Employee ${empName} (${empNo}) added to staff roster!`);
+        setSuccess(`Completed: Employee ${empName} (${empNo}) registered to staff roster!`);
         setEmpNo('');
         setEmpName('');
         setPhone('');
@@ -212,6 +218,85 @@ export default function Attendance() {
     } finally {
       setSubmittingEmp(false);
     }
+  };
+
+  const handleDownloadSampleCsv = () => {
+    const csvContent = "empNo,name,department,section,designation,phone\nEMP-201,Ramesh Naik,Sales,Sarees Division,Sales Executive,9876543210\nEMP-202,Pooja Sharma,Billing,Cash Counter 2,Cashier,9876543211";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "Sample_Employee_Bulk_Import.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        setBulkLoading(true);
+        setError('');
+        setSuccess('');
+        const text = event.target?.result as string;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length <= 1) {
+          setError('CSV file is empty or missing headers.');
+          return;
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const empNoIdx = headers.indexOf('empno');
+        const nameIdx = headers.indexOf('name');
+        const deptIdx = headers.indexOf('department');
+        const secIdx = headers.indexOf('section');
+        const desigIdx = headers.indexOf('designation');
+        const phoneIdx = headers.indexOf('phone');
+
+        if (empNoIdx === -1 || nameIdx === -1) {
+          setError('CSV file must contain "empNo" and "name" column headers.');
+          return;
+        }
+
+        const parsedEmps = [];
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(',').map(cell => cell.trim().replace(/^"|"$/g, ''));
+          if (row.length > empNoIdx && row[empNoIdx]) {
+            parsedEmps.push({
+              empNo: row[empNoIdx],
+              name: row[nameIdx] || 'Staff Member',
+              department: row[deptIdx] || 'Sales',
+              section: row[secIdx] || 'Main Floor',
+              designation: row[desigIdx] || 'Sales Executive',
+              phone: row[phoneIdx] || null
+            });
+          }
+        }
+
+        if (parsedEmps.length === 0) {
+          setError('No valid employee rows parsed from CSV file.');
+          return;
+        }
+
+        const res = await api.post('/api/attendance/employees/bulk', { employees: parsedEmps });
+        if (res.data?.ok) {
+          setSuccess(`Completed: Bulk uploaded ${res.data.inserted} employee records successfully!`);
+          fetchEmployees();
+          fetchAttendance();
+        } else {
+          setError(res.data?.error || 'Bulk upload failed.');
+        }
+      } catch (err: any) {
+        setError('Failed to parse CSV file.');
+      } finally {
+        setBulkLoading(false);
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleDeleteEmployee = async (id: number, name: string) => {
@@ -356,7 +441,7 @@ export default function Attendance() {
             ))}
           </div>
 
-          {/* Date Picker Bar */}
+          {/* Date Picker & Floor Filter Bar */}
           <div
             style={{
               background: '#FFFFFF',
@@ -368,28 +453,58 @@ export default function Attendance() {
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '12px'
+              gap: '16px'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>📅 Attendance Date:</span>
-              <input
-                type="date"
-                value={selectedDateInput}
-                onChange={(e) => setSelectedDateInput(e.target.value)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #CBD5E1',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#0F172A',
-                  background: '#FAF7F2'
-                }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>📅 Date:</span>
+                <input
+                  type="date"
+                  value={selectedDateInput}
+                  onChange={(e) => setSelectedDateInput(e.target.value)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#0F172A',
+                    background: '#FAF7F2'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>🏢 Floor / Section:</span>
+                <select
+                  value={selectedSectionFilter}
+                  onChange={(e) => setSelectedSectionFilter(e.target.value)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#4F46E5',
+                    background: '#FAF7F2',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="ALL">All Store Floors & Sections</option>
+                  <option value="Sarees">Sarees Division</option>
+                  <option value="Mens">Mens Suitings & Wear</option>
+                  <option value="Kids">Kids & Ladies Wear</option>
+                  <option value="Cash">Cash Counters</option>
+                  <option value="Ground Floor">Ground Floor</option>
+                  <option value="First Floor">First Floor</option>
+                  <option value="Second Floor">Second Floor</option>
+                </select>
+              </div>
             </div>
+
             <div style={{ fontSize: '12px', color: '#64748B' }}>
-              Date formatted: <span className="mono" style={{ fontWeight: 700, color: '#4F46E5' }}>{inputToApi(selectedDateInput)}</span>
+              Showing <span style={{ fontWeight: 800, color: '#0F172A' }}>{filteredRecords.length}</span> staff members
             </div>
           </div>
 
@@ -432,7 +547,7 @@ export default function Attendance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {records.map((r) => {
+                    {filteredRecords.map((r) => {
                       const isSaving = savingEmpId === r.empId;
                       return (
                         <tr key={r.empId}>
@@ -516,16 +631,18 @@ export default function Attendance() {
         </>
       )}
 
-      {/* TAB 2: EMPLOYEE MASTER & REGISTRATION */}
+      {/* TAB 2: EMPLOYEE MASTER & BULK REGISTRATION */}
       {activeTab === 'employees' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'start' }}>
-          {/* Add Employee Form Card */}
-          <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
-              ➕ Register New Staff Member
-            </h3>
+          {/* Left Column: Form & Bulk Upload Card */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Add Single Employee Form */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
+                ➕ Register Single Staff Member
+              </h3>
 
-            <form onSubmit={handleCreateEmployee}>
+              <form onSubmit={handleCreateEmployee}>
               <div className="field">
                 <label>Employee No <span className="req">*</span></label>
                 <input
@@ -603,6 +720,63 @@ export default function Attendance() {
               </button>
             </form>
           </div>
+
+          {/* Bulk CSV Employee Upload Card */}
+          <div className="glass-card" style={{ padding: '24px', background: '#F8FAFC' }}>
+            <h4 className="outfit" style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📁 Bulk Employee Entry (CSV File)
+            </h4>
+            <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '16px' }}>
+              Upload multiple staff members in one click via CSV spreadsheet
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={handleDownloadSampleCsv}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  background: '#FFFFFF',
+                  color: '#4F46E5',
+                  border: '1px solid #C7D2FE',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                📥 Download Sample CSV Template
+              </button>
+
+              <label
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  background: bulkLoading ? '#CBD5E1' : '#10B981',
+                  color: '#FFFFFF',
+                  textAlign: 'center',
+                  cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                  display: 'block'
+                }}
+              >
+                {bulkLoading ? 'Processing Bulk CSV...' : '📤 Choose CSV File & Bulk Import'}
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkCsvUpload}
+                  disabled={bulkLoading}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
 
           {/* Employee Directory List */}
           <div className="glass-card" style={{ padding: '24px' }}>
