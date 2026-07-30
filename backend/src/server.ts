@@ -11,6 +11,7 @@ import authRoutes from './routes/auth';
 import crmRoutes from './routes/crm';
 import cashRoutes from './routes/cash';
 import vmRoutes from './routes/vm';
+import attendanceRoutes from './routes/attendance';
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/cash', cashRoutes);
 app.use('/api/vm', vmRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // Serve static frontend build assets
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));

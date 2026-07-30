@@ -20,7 +20,7 @@ export const getDashboard = async (req: Request, res: Response) => {
     const todayStr = req.query.date as string || formatDateString(new Date());
 
     const footfalls = await query('SELECT * FROM FootfallEntry WHERE date = ? AND deleted_at IS NULL', [todayStr]);
-    const [summary] = await query('SELECT * FROM DailySummary WHERE date = ? AND deleted_at IS NULL LIMIT 1', [todayStr]);
+    const [summaryRow] = await query('SELECT * FROM DailySummary WHERE date = ? AND deleted_at IS NULL LIMIT 1', [todayStr]);
     const [{ cnt: openDivertsCount }] = await query(
       "SELECT COUNT(*) as cnt FROM Divert WHERE status IN ('open','sourcing','available') AND deleted_at IS NULL"
     );
@@ -47,18 +47,29 @@ export const getDashboard = async (req: Request, res: Response) => {
 
     const nps = totalFeedbackWithNps > 0 ? Math.round(((promoters - detractors) / totalFeedbackWithNps) * 100) : 0;
     const csi = feedbacks.length > 0 ? Math.round((csiTotal / (feedbacks.length * 5)) * 100) : 100;
-    const reviews = feedbacks.filter((f: any) => f.yourVoice).map((f: any) => ({
-      name: f.custName || 'Anonymous', area: f.area, text: f.yourVoice
-    }));
+
+    // Fetch top 10 recent customer voice feedbacks across all dates
+    const recentReviews = await query(
+      'SELECT custName as name, area, yourVoice as text, date FROM Feedback WHERE yourVoice IS NOT NULL AND yourVoice != "" AND deleted_at IS NULL ORDER BY id DESC LIMIT 10'
+    );
+
+    const metricsData = {
+      totalFootfall: footfalls.reduce((sum: number, item: any) => sum + item.count, 0),
+      totalBills: summaryRow ? summaryRow.billsCount : 0,
+      openDiverts: openDivertsCount,
+      feedbacksCollected: feedbacks.length,
+      nps,
+      csi
+    };
 
     return res.json({
-      ok: true, today: todayStr,
-      metrics: {
-        totalFootfall: footfalls.reduce((sum: number, item: any) => sum + item.count, 0),
-        totalBills: summary ? summary.billsCount : 0,
-        openDiverts: openDivertsCount, feedbacksCollected: feedbacks.length, nps, csi
-      },
-      footfalls, reviews
+      ok: true,
+      today: todayStr,
+      metrics: metricsData,
+      summary: metricsData,
+      footfalls,
+      reviews: recentReviews,
+      recentReviews
     });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
@@ -251,23 +262,26 @@ export const getSettings = async (req: Request, res: Response) => {
 export const updateSettings = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { companyName, companyLogoUrl, operatingStart, operatingEnd,
-      footfallGraceMin, footfallEditCutoff, derEmail } = req.body;
+      footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin } = req.body;
+
+    const tvPinVal = tvBoardPin || '9911';
+    const cashPinVal = cashSettlementPin || '1234';
 
     const [existing] = await query('SELECT id FROM Settings WHERE deleted_at IS NULL LIMIT 1');
     if (existing) {
       await query(
         `UPDATE Settings SET companyName=?, companyLogoUrl=?, operatingStart=?, operatingEnd=?,
-         footfallGraceMin=?, footfallEditCutoff=?, derEmail=? WHERE id=?`,
+         footfallGraceMin=?, footfallEditCutoff=?, derEmail=?, tvBoardPin=?, cashSettlementPin=? WHERE id=?`,
         [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
-          footfallGraceMin, footfallEditCutoff, derEmail || null, existing.id]
+          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal, existing.id]
       );
     } else {
       await query(
         `INSERT INTO Settings (companyName, companyLogoUrl, operatingStart, operatingEnd,
-           footfallGraceMin, footfallEditCutoff, derEmail, setupComplete)
-         VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)`,
+           footfallGraceMin, footfallEditCutoff, derEmail, tvBoardPin, cashSettlementPin, setupComplete)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
         [companyName, companyLogoUrl || null, operatingStart, operatingEnd,
-          footfallGraceMin, footfallEditCutoff, derEmail || null]
+          footfallGraceMin, footfallEditCutoff, derEmail || null, tvPinVal, cashPinVal]
       );
     }
     await logAdminAction(

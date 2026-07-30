@@ -1,0 +1,115 @@
+import { Request, Response } from 'express';
+import { query } from '../config/db';
+import { AuthenticatedRequest } from '../middleware/auth';
+import { formatDateString } from './crmController';
+
+// 1. Get Employee Roster
+export const getEmployees = async (req: Request, res: Response) => {
+  try {
+    const employees = await query(
+      'SELECT * FROM Employee WHERE deleted_at IS NULL ORDER BY empNo ASC'
+    );
+    return res.json({ ok: true, employees });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
+// 2. Add New Employee
+export const createEmployee = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { empNo, name, department, section, designation, phone } = req.body;
+    if (!empNo || !name || !department || !section || !designation) {
+      return res.status(400).json({ ok: false, error: 'Employee No, Name, Department, Section, and Designation are required.' });
+    }
+
+    const [existing] = await query('SELECT id FROM Employee WHERE empNo = ? AND deleted_at IS NULL', [empNo]);
+    if (existing) {
+      return res.status(400).json({ ok: false, error: `Employee No '${empNo}' is already registered.` });
+    }
+
+    await query(
+      `INSERT INTO Employee (empNo, name, department, section, designation, phone)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [empNo, name, department, section, designation, phone || null]
+    );
+
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
+// 3. Delete Employee
+export const deleteEmployee = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await query('UPDATE Employee SET deleted_at = NOW(), isActive = FALSE WHERE id = ?', [id]);
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
+// 4. Get Daily Attendance Register
+export const getAttendance = async (req: Request, res: Response) => {
+  try {
+    const dateStr = (req.query.date as string) || formatDateString(new Date());
+
+    // Join Employee roster with Attendance table for given date
+    const records = await query(
+      `SELECT 
+        e.id as empId,
+        e.empNo,
+        e.name as userName,
+        e.department,
+        e.section,
+        e.designation as userRole,
+        COALESCE(a.id, 0) as id,
+        COALESCE(a.date, ?) as date,
+        COALESCE(a.status, 'present') as status,
+        a.checkIn,
+        a.checkOut,
+        COALESCE(a.workedMinutes, 0) as workedMinutes,
+        a.remarks
+       FROM Employee e
+       LEFT JOIN Attendance a ON e.id = a.empId AND a.date = ? AND a.deleted_at IS NULL
+       WHERE e.deleted_at IS NULL AND e.isActive = TRUE
+       ORDER BY e.empNo ASC`,
+      [dateStr, dateStr]
+    );
+
+    return res.json({ ok: true, date: dateStr, records });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
+// 5. Save/Update Employee Attendance Record
+export const upsertAttendance = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { empId, date, status, checkIn, checkOut, workedMinutes, remarks } = req.body;
+    if (!empId || !date || !status) {
+      return res.status(400).json({ ok: false, error: 'empId, date, and status are required' });
+    }
+
+    const markedBy = req.user?.name || 'Manager';
+
+    await query(
+      `INSERT INTO Attendance (empId, date, status, checkIn, checkOut, workedMinutes, remarks, markedBy)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+        status = VALUES(status),
+        checkIn = VALUES(checkIn),
+        checkOut = VALUES(checkOut),
+        workedMinutes = VALUES(workedMinutes),
+        remarks = VALUES(remarks),
+        markedBy = VALUES(markedBy)`,
+      [empId, date, status, checkIn || null, checkOut || null, workedMinutes || 0, remarks || null, markedBy]
+    );
+
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};

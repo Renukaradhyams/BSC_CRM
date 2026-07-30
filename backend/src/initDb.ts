@@ -14,11 +14,17 @@ export async function initDb() {
     \`footfallEditCutoff\` VARCHAR(50) DEFAULT '10:30',
     \`derEmail\` VARCHAR(255) NULL,
     \`derWhatsappNote\` VARCHAR(500) NULL,
+    \`tvBoardPin\` VARCHAR(50) DEFAULT '9911',
+    \`cashSettlementPin\` VARCHAR(50) DEFAULT '1234',
     \`setupComplete\` BOOLEAN DEFAULT FALSE,
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     \`deleted_at\` TIMESTAMP NULL
   )`);
+
+  // Safe migrations for Settings PIN columns
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `tvBoardPin` VARCHAR(50) DEFAULT '9911'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `cashSettlementPin` VARCHAR(50) DEFAULT '1234'"); } catch (_) {}
 
   await query(`CREATE TABLE IF NOT EXISTS \`User\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,
@@ -275,9 +281,61 @@ export async function initDb() {
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  await query(`CREATE TABLE IF NOT EXISTS \`Employee\` (
+    \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+    \`empNo\` VARCHAR(50) UNIQUE NOT NULL,
+    \`name\` VARCHAR(255) NOT NULL,
+    \`department\` VARCHAR(100) NOT NULL,
+    \`section\` VARCHAR(100) NOT NULL,
+    \`designation\` VARCHAR(100) NOT NULL,
+    \`phone\` VARCHAR(50) NULL,
+    \`isActive\` BOOLEAN DEFAULT TRUE,
+    \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    \`deleted_at\` TIMESTAMP NULL
+  )`);
+
+  await query(`CREATE TABLE IF NOT EXISTS \`Attendance\` (
+    \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+    \`empId\` INT NOT NULL,
+    \`date\` VARCHAR(50) NOT NULL,
+    \`status\` VARCHAR(50) DEFAULT 'present',
+    \`checkIn\` VARCHAR(50) NULL,
+    \`checkOut\` VARCHAR(50) NULL,
+    \`workedMinutes\` INT DEFAULT 0,
+    \`remarks\` TEXT NULL,
+    \`markedBy\` VARCHAR(255) NULL,
+    \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    \`deleted_at\` TIMESTAMP NULL,
+    UNIQUE KEY \`emp_date_unique\` (\`empId\`, \`date\`),
+    FOREIGN KEY (\`empId\`) REFERENCES \`Employee\`(\`id\`) ON DELETE CASCADE
+  )`);
+
   console.log('✅ All database tables ready.');
   await seedIfEmpty();
   await ensureGreeterUsers();
+  await ensureSampleEmployees();
+}
+
+async function ensureSampleEmployees() {
+  try {
+    const existing = await query('SELECT id FROM Employee LIMIT 1');
+    if (existing.length === 0) {
+      console.log('🌱 Seeding initial Employee staff roster...');
+      await query(
+        `INSERT INTO Employee (empNo, name, department, section, designation, phone) VALUES
+         ('EMP-101', 'Rajesh Patil', 'Sales', 'Sarees Division', 'Senior Sales Executive', '9845012345'),
+         ('EMP-102', 'Suresh Kumar', 'Sales', 'Mens Suitings', 'Floor Supervisor', '9765432100'),
+         ('EMP-103', 'Anitha Rao', 'Billing', 'Cash Counter 1', 'Billing Cashier', '9654321009'),
+         ('EMP-104', 'Durgappa K', 'Visual Merchandising', 'Floor 1', 'VM Executive', '9543210098'),
+         ('EMP-105', 'Meena Kulkarni', 'Customer Support', 'Helpdesk', 'Greeter', '9432100987')`
+      );
+      console.log('✅ Sample employees seeded.');
+    }
+  } catch (err) {
+    console.error('Failed to seed sample employees', err);
+  }
 }
 
 async function ensureGreeterUsers() {

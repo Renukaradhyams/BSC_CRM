@@ -80,15 +80,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'footfall':
       case 'divert':
       case 'cash-settlement':
-        return ['crm_manager', 'crm_staff'].includes(role);
+        return ['crm_manager', 'crm_staff', 'greeter', 'telecaller'].includes(role);
       case 'feedback-list':
-        return ['crm_manager', 'telecaller'].includes(role);
+        return ['crm_manager', 'telecaller', 'greeter'].includes(role);
       case 'pm-view':
         return role === 'purchase_manager';
       case 'vm-checklist':
         return ['crm_manager', 'vm'].includes(role);
       case 'attendance':
-        return ['crm_manager', 'admin', 'super_admin', 'hr'].includes(role);
+        return ['crm_manager', 'admin', 'super_admin', 'hr', 'greeter'].includes(role);
       case 'admin':
         return false;
       default:

@@ -47,6 +47,8 @@ export default function Admin() {
   const [graceMin, setGraceMin] = useState<number>(30);
   const [editCutoff, setEditCutoff] = useState<string>('10:30');
   const [derEmail, setDerEmail] = useState<string>('');
+  const [tvBoardPin, setTvBoardPin] = useState<string>('9911');
+  const [cashSettlementPin, setCashSettlementPin] = useState<string>('1234');
 
   // New User form state
   const [newUserName, setNewUserName] = useState<string>('');
@@ -94,6 +96,8 @@ export default function Admin() {
         setGraceMin(s.footfallGraceMin);
         setEditCutoff(s.footfallEditCutoff);
         setDerEmail(s.derEmail || '');
+        setTvBoardPin(s.tvBoardPin || '9911');
+        setCashSettlementPin(s.cashSettlementPin || '1234');
       }
     } catch (err) {
       setError('Failed to fetch registry lists.');
@@ -132,7 +136,9 @@ export default function Admin() {
         operatingEnd: opEnd,
         footfallGraceMin: graceMin,
         footfallEditCutoff: editCutoff,
-        derEmail
+        derEmail,
+        tvBoardPin,
+        cashSettlementPin
       });
       if (res.data && res.data.ok) {
         setSuccess('Company profile parameters saved successfully!');
@@ -553,8 +559,51 @@ export default function Admin() {
               <label>DER Report Email Target</label>
               <input type="email" placeholder="manager@bsctextiles.com" value={derEmail} onChange={(e) => setDerEmail(e.target.value)} />
             </div>
+
+            {/* Master Security PINs Configuration */}
+            <div style={{
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
+              borderRadius: '12px',
+              padding: '20px',
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}>
+              <h4 className="outfit" style={{ fontSize: '15px', fontWeight: 700, color: '#1D4ED8', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🔑 Master Security PINs Configuration
+              </h4>
+              <p style={{ fontSize: '12px', color: '#3B82F6', marginBottom: '16px' }}>
+                Configure access PINs for store Live TV Scoreboards and Cash Settlement counters
+              </p>
+
+              <div className="field-row">
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ color: '#1E40AF' }}>Live TV Scoreboard PIN</label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={tvBoardPin}
+                    onChange={(e) => setTvBoardPin(e.target.value)}
+                    placeholder="e.g. 9911"
+                    style={{ fontWeight: 800, letterSpacing: '2px', background: '#FFFFFF', color: '#1D4ED8' }}
+                  />
+                </div>
+                <div className="field" style={{ margin: 0 }}>
+                  <label style={{ color: '#1E40AF' }}>Cash Settlement Counter PIN</label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={cashSettlementPin}
+                    onChange={(e) => setCashSettlementPin(e.target.value)}
+                    placeholder="e.g. 1234"
+                    style={{ fontWeight: 800, letterSpacing: '2px', background: '#FFFFFF', color: '#1D4ED8' }}
+                  />
+                </div>
+              </div>
+            </div>
+
             <button type="submit" className="btn btn-teal btn-full" style={{ marginTop: '12px' }}>
-              💾 Save Store Configurations
+              💾 Save Store Configurations & PINs
             </button>
           </form>
         </div>

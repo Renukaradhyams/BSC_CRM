@@ -19,8 +19,8 @@ router.post('/feedback', authenticateJWT, saveFeedback);
 router.post('/feedback/public', saveFeedback); // Public QR submission is unsecured
 
 // Negative feedback follow-up CallQueue
-router.get('/call-queue', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'telecaller', 'crm_manager']), getCallQueue);
-router.put('/call-queue/status', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'telecaller', 'crm_manager']), updateCallStatus);
+router.get('/call-queue', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'telecaller', 'crm_manager', 'greeter']), getCallQueue);
+router.put('/call-queue/status', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'telecaller', 'crm_manager', 'greeter']), updateCallStatus);
 
 // Diverts CRUD
 router.get('/divert', authenticateJWT, getDiverts);

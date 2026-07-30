@@ -85,10 +85,24 @@ export default function TVDisplay() {
     return () => clearInterval(poll);
   }, [authenticated]);
 
+  const [validTvPin, setValidTvPin] = useState<string>('9911');
+
+  useEffect(() => {
+    const loadTvPin = async () => {
+      try {
+        const res = await api.get('/api/crm/settings');
+        if (res.data?.ok && res.data.settings?.tvBoardPin) {
+          setValidTvPin(res.data.settings.tvBoardPin);
+        }
+      } catch (_) {}
+    };
+    loadTvPin();
+  }, []);
+
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const validPins = ['9911', '1234', '5678', '4321', '9900'];
-    if (validPins.includes(pin)) {
+    const allowedPins = [validTvPin, '9911', '1234', '5678', '4321', '9900'];
+    if (allowedPins.includes(pin)) {
       setAuthenticated(true);
       setError('');
     } else {
