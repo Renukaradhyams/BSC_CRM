@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -37,6 +37,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [targetRole, setTargetRole] = useState<string>('ALL');
   const [sendingMsg, setSendingMsg] = useState<boolean>(false);
   const [msgSuccess, setMsgSuccess] = useState<string>('');
+  const prevUnreadCountRef = useRef<number>(0);
+
+  // Synth Chime Sound on New Notification
+  const playNotificationSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch {
+      // Audio context blocked until interaction
+    }
+  };
 
   // Live Clock & Date
   useEffect(() => {
@@ -63,12 +84,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch notifications
+  // Fetch notifications with audio chime on new unread item
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await api.get('/api/notifications');
       if (res.data?.ok) {
-        setNotifications(res.data.notifications || []);
+        const fetched: NotificationItem[] = res.data.notifications || [];
+        const unreadCount = fetched.filter(n => !n.isRead).length;
+
+        if (unreadCount > prevUnreadCountRef.current) {
+          playNotificationSound();
+        }
+        prevUnreadCountRef.current = unreadCount;
+        setNotifications(fetched);
       }
     } catch {
       // ignore
@@ -138,7 +166,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     } catch { /* ignore */ }
   };
 
-  // Role visibility filter
+  // Role visibility filter (Cash Settlement removed)
   const showMenu = (item: string): boolean => {
     if (!user) return false;
     const role = user.role;
@@ -151,7 +179,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'tv':
       case 'footfall':
       case 'divert':
-      case 'cash-settlement':
         return ['crm_manager', 'crm_staff', 'greeter', 'telecaller'].includes(role);
       case 'feedback-list':
         return ['crm_manager', 'telecaller', 'greeter'].includes(role);
@@ -162,6 +189,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'attendance':
       case 'attendance-tv':
         return ['crm_manager', 'admin', 'super_admin', 'hr', 'greeter', 'crm_staff'].includes(role);
+      case 'cash-settlement':
       case 'admin':
         return false;
       default:
@@ -179,7 +207,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { id: 'feedback-qr', path: '/app/feedback-qr', label: 'New Feedback', icon: '📱' },
         { id: 'divert', path: '/app/divert', label: 'Divert Register', icon: '📦' },
         { id: 'pm-view', path: '/app/pm-view', label: 'Purchase Manager', icon: '👔' },
-        { id: 'cash-settlement', path: '/app/cash-settlement', label: 'Cash Settlement', icon: '💰' },
         { id: 'vm-checklist', path: '/app/vm-checklist', label: 'VM Checklist', icon: '🏢' },
         { id: 'attendance', path: '/app/attendance', label: 'Staff Attendance', icon: '🗓️' },
         { id: 'attendance-tv', path: '/app/attendance-tv', label: 'Floor TV Roster', icon: '📺', openNewTab: true },
@@ -396,7 +423,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content Area with Sticky/Anchored Bottom Developer Footer */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#FAF7F2' }}>
         {/* Top Bar */}
         <header
@@ -475,7 +502,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       height: '18px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(239,68,68,0.4)'
                     }}
                   >
                     {unreadCount}
@@ -486,22 +514,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
 
-        {/* Viewport Content Container */}
+        {/* Viewport Content Container with Anchored Footer */}
         <main style={{ flex: 1, overflowY: 'auto', background: '#FAF7F2', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             {children}
           </div>
 
-          {/* Right-aligned Developer Credits Footer */}
+          {/* Developer Credits Footer - Fixed at bottom end of content container */}
           <footer
             style={{
-              padding: '12px 24px',
+              padding: '14px 28px',
               borderTop: '1px solid #EAE5DC',
               textAlign: 'right',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 600,
               color: '#64748B',
-              background: '#FFFFFF'
+              background: '#FFFFFF',
+              flexShrink: 0
             }}
           >
             Designed and Developed by <span style={{ color: '#4F46E5', fontWeight: 800 }}>Renukaradhya M S</span>
@@ -509,7 +538,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
 
-      {/* Slide-Over Notification Drawer Panel */}
+      {/* Slide-Over Redesigned Notification Drawer Panel */}
       {showNotifDrawer && (
         <div
           style={{
@@ -526,11 +555,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '380px',
-              maxWidth: '90vw',
+              width: '420px',
+              maxWidth: '92vw',
               height: '100%',
               background: '#FFFFFF',
-              boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+              boxShadow: '-4px 0 28px rgba(0,0,0,0.18)',
               display: 'flex',
               flexDirection: 'column',
               padding: '24px'
@@ -539,7 +568,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🔔 Staff Notifications & Broadcasts
+                🔔 Broadcast & Telemetry Desk
               </h3>
               <button
                 onClick={() => setShowNotifDrawer(false)}
@@ -551,19 +580,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
             {/* Broadcast Composer for Managers & Admins */}
             {isManagerOrAdmin && (
-              <div style={{ background: '#FAF7F2', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  ✉️ Send Broadcast Message to Staff
+              <div style={{ background: '#FAF7F2', border: '1.5px solid #E2E8F0', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ✉️ Compose Broadcast Notification
                 </h4>
 
-                {msgSuccess && <div style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginBottom: '8px' }}>{msgSuccess}</div>}
+                {msgSuccess && <div style={{ fontSize: '12px', color: '#059669', fontWeight: 800, marginBottom: '10px', background: '#D1FAE5', padding: '6px 10px', borderRadius: '6px' }}>{msgSuccess}</div>}
 
                 <form onSubmit={handleSendNotification}>
-                  <div style={{ marginBottom: '8px' }}>
+                  <div style={{ marginBottom: '10px' }}>
                     <select
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value)}
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700 }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700, background: '#FFFFFF' }}
                     >
                       <option value="ALL">📢 All Logged-in Staff Users</option>
                       <option value="crm_manager">👔 CRM Managers</option>
@@ -573,25 +602,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </select>
                   </div>
 
-                  <div style={{ marginBottom: '8px' }}>
+                  <div style={{ marginBottom: '10px' }}>
                     <input
                       type="text"
-                      placeholder="Message Subject / Title"
+                      placeholder="Notification Title / Alert"
                       value={msgTitle}
                       onChange={(e) => setMsgTitle(e.target.value)}
                       required
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', background: '#FFFFFF' }}
                     />
                   </div>
 
-                  <div style={{ marginBottom: '10px' }}>
+                  <div style={{ marginBottom: '12px' }}>
                     <textarea
-                      placeholder="Type broadcast message details..."
+                      placeholder="Type broadcast announcement details..."
                       rows={3}
                       value={msgBody}
                       onChange={(e) => setMsgBody(e.target.value)}
                       required
-                      style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px', resize: 'vertical' }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', resize: 'vertical', background: '#FFFFFF' }}
                     />
                   </div>
 
@@ -600,17 +629,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     disabled={sendingMsg}
                     style={{
                       width: '100%',
-                      padding: '8px',
-                      borderRadius: '6px',
+                      padding: '9px',
+                      borderRadius: '8px',
                       background: '#4F46E5',
                       color: '#FFFFFF',
                       fontSize: '12px',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       border: 'none',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(79,70,229,0.3)'
                     }}
                   >
-                    {sendingMsg ? 'Sending...' : '📤 Send Broadcast'}
+                    {sendingMsg ? 'Sending...' : '📤 Send Broadcast Message'}
                   </button>
                 </form>
               </div>
@@ -625,27 +655,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     style={{
                       background: '#FFFFFF',
                       border: '1px solid #E2E8F0',
-                      borderRadius: '10px',
-                      padding: '12px 14px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                      borderRadius: '12px',
+                      padding: '14px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{n.title}</span>
-                      <span style={{ fontSize: '10px', color: '#94A3B8' }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 6px 0', lineHeight: 1.4 }}>
+                    <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 8px 0', lineHeight: 1.4 }}>
                       {n.message}
                     </p>
-                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>From: {n.senderName} ({n.senderRole})</span>
-                      <span style={{ color: '#4F46E5', fontWeight: 700 }}>Target: {n.targetRole}</span>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #F1F5F9', paddingTop: '6px' }}>
+                      <span>From: <strong style={{ color: '#0F172A' }}>{n.senderName}</strong> ({n.senderRole})</span>
+                      <span style={{ color: '#4F46E5', fontWeight: 800 }}>Target: {n.targetRole}</span>
                     </div>
                   </div>
                 ))
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: '#94A3B8', fontSize: '13px' }}>
-                  No broadcasts or notifications yet.
+                  No notifications or broadcasts recorded yet.
                 </div>
               )}
             </div>

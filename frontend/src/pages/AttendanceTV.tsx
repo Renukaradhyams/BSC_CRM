@@ -14,6 +14,10 @@ interface AttendanceTVRecord {
 }
 
 export default function AttendanceTV() {
+  const [pin, setPin] = useState<string>('');
+  const [authenticated, setAuthenticated] = useState<boolean>(false);
+  const [pinError, setPinError] = useState<string>('');
+
   const [selectedFloor, setSelectedFloor] = useState<string>('ALL');
   const [records, setRecords] = useState<AttendanceTVRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -21,6 +25,7 @@ export default function AttendanceTV() {
 
   // Clock
   useEffect(() => {
+    if (!authenticated) return;
     const updateTime = () => {
       const d = new Date();
       setTimeStr(d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
@@ -28,10 +33,23 @@ export default function AttendanceTV() {
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [authenticated]);
 
-  // Poll Attendance Data every 20s
+  // Handle PIN unlock
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin === '9911' || pin === '1234') {
+      setAuthenticated(true);
+      setPinError('');
+    } else {
+      setPinError('Invalid Live TV Unlock PIN code');
+    }
+  };
+
+  // Poll Attendance Data every 15s
   useEffect(() => {
+    if (!authenticated) return;
+
     const fetchAttendanceData = async () => {
       try {
         const res = await api.get('/api/attendance');
@@ -46,9 +64,108 @@ export default function AttendanceTV() {
     };
 
     fetchAttendanceData();
-    const poll = setInterval(fetchAttendanceData, 20000);
+    const poll = setInterval(fetchAttendanceData, 15000);
     return () => clearInterval(poll);
-  }, []);
+  }, [authenticated]);
+
+  // Unlock PIN Screen matching TVDisplay.tsx
+  if (!authenticated) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#0B0F19',
+          color: '#FFFFFF',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          fontFamily: "'Inter', sans-serif"
+        }}
+        className="fade-in"
+      >
+        <div
+          style={{
+            background: 'rgba(30, 41, 59, 0.8)',
+            border: '1.5px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '20px',
+            padding: '36px 40px',
+            width: '400px',
+            maxWidth: '100%',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              background: '#4F46E5',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '32px',
+              margin: '0 auto 16px auto',
+              boxShadow: '0 8px 24px rgba(79,70,229,0.4)'
+            }}
+          >
+            📺
+          </div>
+          <h2 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '6px' }}>
+            Floor TV Attendance Unlock
+          </h2>
+          <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '24px' }}>
+            Enter Master Live TV Security PIN (Default: <span className="mono" style={{ color: '#F59E0B', fontWeight: 700 }}>9911</span>)
+          </p>
+
+          {pinError && <div style={{ color: '#FCA5A5', fontSize: '12px', fontWeight: 700, marginBottom: '16px', background: 'rgba(239,68,68,0.2)', padding: '8px', borderRadius: '8px' }}>{pinError}</div>}
+
+          <form onSubmit={handlePinSubmit}>
+            <input
+              type="password"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="••••"
+              autoFocus
+              className="mono"
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                background: '#0F172A',
+                border: '1px solid #334155',
+                color: '#FFFFFF',
+                fontSize: '24px',
+                textAlign: 'center',
+                letterSpacing: '8px',
+                marginBottom: '20px'
+              }}
+            />
+
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '10px',
+                background: '#4F46E5',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(79,70,229,0.4)'
+              }}
+            >
+              Unlock Floor Telemetry TV →
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   // Filter records by selected floor/section
   const filteredRecords = selectedFloor === 'ALL'
@@ -64,7 +181,7 @@ export default function AttendanceTV() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#0F172A',
+        background: '#0B0F19',
         color: '#FFFFFF',
         padding: '24px 32px',
         display: 'flex',
@@ -73,13 +190,13 @@ export default function AttendanceTV() {
       }}
       className="fade-in"
     >
-      {/* Top Header Bar */}
+      {/* Top Header Bar matching TVDisplay.tsx */}
       <header
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justify: 'space-between',
           alignItems: 'center',
-          borderBottom: '2px solid rgba(255,255,255,0.1)',
+          borderBottom: '2px solid rgba(255,255,255,0.08)',
           paddingBottom: '16px',
           marginBottom: '24px'
         }}
@@ -87,14 +204,14 @@ export default function AttendanceTV() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div
             style={{
-              width: '44px',
-              height: '44px',
+              width: '46px',
+              height: '46px',
               background: '#4F46E5',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '22px',
+              fontSize: '24px',
               fontWeight: 800,
               boxShadow: '0 4px 14px rgba(79,70,229,0.4)'
             }}
@@ -103,20 +220,20 @@ export default function AttendanceTV() {
           </div>
           <div>
             <h1 className="outfit" style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.3px' }}>
-              Floor Live Attendance Telemetry Board
+              Floor Live Attendance Scoreboard
             </h1>
             <div style={{ fontSize: '13px', color: '#94A3B8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>BSC THE TEXTILE MALL</span>
               <span>·</span>
-              <span style={{ color: '#10B981', fontWeight: 700 }}>● LIVE AUTO-POLLING</span>
+              <span style={{ color: '#10B981', fontWeight: 700 }}>● LIVE STORE POLLING</span>
             </div>
           </div>
         </div>
 
-        {/* Floor Dropdown & Clock */}
+        {/* Floor Dropdown & Digital Clock */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.06)', padding: '6px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.12)' }}>
-            <span style={{ fontSize: '12px', color: '#CBD5E1', fontWeight: 700, textTransform: 'uppercase' }}>Select Floor:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.06)', padding: '8px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <span style={{ fontSize: '12px', color: '#CBD5E1', fontWeight: 700, textTransform: 'uppercase' }}>Floor Filter:</span>
             <select
               value={selectedFloor}
               onChange={(e) => setSelectedFloor(e.target.value)}
@@ -125,7 +242,7 @@ export default function AttendanceTV() {
                 color: '#FFFFFF',
                 border: '1px solid #475569',
                 padding: '6px 12px',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 fontSize: '13px',
                 fontWeight: 700,
                 cursor: 'pointer'
@@ -138,25 +255,25 @@ export default function AttendanceTV() {
             </select>
           </div>
 
-          <div className="mono" style={{ fontSize: '24px', fontWeight: 800, color: '#F59E0B' }}>
+          <div className="mono" style={{ fontSize: '24px', fontWeight: 800, color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '6px 16px', borderRadius: '10px', border: '1px solid rgba(245,158,11,0.3)' }}>
             {timeStr}
           </div>
         </div>
       </header>
 
-      {/* Main Grid: Present vs Absent/Late */}
+      {/* Main Grid: Present vs Absent */}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-          <div className="spinner" style={{ width: '36px', height: '36px', borderTopColor: '#4F46E5' }} />
+          <div className="spinner" style={{ width: '40px', height: '40px', borderTopColor: '#4F46E5' }} />
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flex: 1, minHeight: 0 }}>
           {/* LEFT: PRESENT ON FLOOR */}
           <div
             style={{
-              background: 'rgba(16, 185, 129, 0.05)',
+              background: 'rgba(16, 185, 129, 0.04)',
               border: '1.5px solid rgba(16, 185, 129, 0.25)',
-              borderRadius: '16px',
+              borderRadius: '20px',
               padding: '24px',
               display: 'flex',
               flexDirection: 'column'
@@ -164,23 +281,23 @@ export default function AttendanceTV() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '20px' }}>🟢</span>
+                <span style={{ fontSize: '22px' }}>🟢</span>
                 <h2 className="outfit" style={{ fontSize: '20px', fontWeight: 800, color: '#34D399' }}>
                   PRESENT ON FLOOR ({presentList.length})
                 </h2>
               </div>
-              <span style={{ background: '#065F46', color: '#A7F3D0', fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '20px' }}>
+              <span style={{ background: '#065F46', color: '#A7F3D0', fontSize: '11px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px' }}>
                 ON DUTY
               </span>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', alignContent: 'start' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px', alignContent: 'start' }}>
               {presentList.length > 0 ? (
                 presentList.map(r => (
                   <div
                     key={r.empId}
                     style={{
-                      background: 'rgba(15, 23, 42, 0.8)',
+                      background: 'rgba(15, 23, 42, 0.85)',
                       border: '1px solid rgba(16, 185, 129, 0.3)',
                       borderRadius: '12px',
                       padding: '14px 16px',
@@ -191,13 +308,13 @@ export default function AttendanceTV() {
                   >
                     <div
                       style={{
-                        width: '38px',
-                        height: '38px',
+                        width: '40px',
+                        height: '40px',
                         borderRadius: '50%',
                         background: '#10B981',
                         color: '#FFFFFF',
                         fontWeight: 800,
-                        fontSize: '15px',
+                        fontSize: '16px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -229,12 +346,12 @@ export default function AttendanceTV() {
             </div>
           </div>
 
-          {/* RIGHT: NOT ON FLOOR / ABSENT / LATE / LEAVE */}
+          {/* RIGHT: NOT ON FLOOR */}
           <div
             style={{
-              background: 'rgba(239, 68, 68, 0.05)',
+              background: 'rgba(239, 68, 68, 0.04)',
               border: '1.5px solid rgba(239, 68, 68, 0.25)',
-              borderRadius: '16px',
+              borderRadius: '20px',
               padding: '24px',
               display: 'flex',
               flexDirection: 'column'
@@ -242,17 +359,17 @@ export default function AttendanceTV() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '20px' }}>🔴</span>
+                <span style={{ fontSize: '22px' }}>🔴</span>
                 <h2 className="outfit" style={{ fontSize: '20px', fontWeight: 800, color: '#FCA5A5' }}>
                   NOT ON FLOOR ({absentList.length})
                 </h2>
               </div>
-              <span style={{ background: '#7F1D1D', color: '#FCA5A5', fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '20px' }}>
+              <span style={{ background: '#7F1D1D', color: '#FCA5A5', fontSize: '11px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px' }}>
                 ABSENT / LATE / LEAVE
               </span>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', alignContent: 'start' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px', alignContent: 'start' }}>
               {absentList.length > 0 ? (
                 absentList.map(r => {
                   const statusColors: Record<string, { bg: string; color: string; label: string }> = {
@@ -267,7 +384,7 @@ export default function AttendanceTV() {
                     <div
                       key={r.empId}
                       style={{
-                        background: 'rgba(15, 23, 42, 0.8)',
+                        background: 'rgba(15, 23, 42, 0.85)',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
                         borderRadius: '12px',
                         padding: '14px 16px',

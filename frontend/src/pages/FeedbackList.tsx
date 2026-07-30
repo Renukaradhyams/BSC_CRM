@@ -68,7 +68,7 @@ export default function FeedbackList() {
           setQueue(res.data.queue || []);
         }
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch data list.');
     } finally {
       setLoading(false);
@@ -96,34 +96,22 @@ export default function FeedbackList() {
         id: editingItem.id,
         callStatus,
         callNote,
-        followupDate,
+        followupDate: followupDate || null,
         escalated
       });
 
       if (res.data && res.data.ok) {
-        setSuccess('Call outcome successfully recorded!');
+        setSuccess('Completed: Call queue follow-up status saved successfully!');
         setEditingItem(null);
         fetchData();
+      } else {
+        setError(res.data?.error || 'Failed to update status.');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update call status.');
+    } catch {
+      setError('Error saving call update.');
     } finally {
       setSavingCall(false);
     }
-  };
-
-  // WhatsApp template generator link
-  const triggerWhatsApp = (mobile: string, name: string, status: string) => {
-    const cleanMobile = mobile.replace(/[^0-9]/g, '');
-    let message = `Hello ${name || 'Customer'},\n\nWe noticed you had some concerns during your recent visit to BSC Belagavi store. We would love to address them and resolve your feedback.\n\nThank you,\nBSC Textiles Team`;
-
-    if (status === 'issue_resolved') {
-      message = `Hello ${name || 'Customer'},\n\nThank you for speaking with us. We are pleased to note that your concern has been resolved. We look forward to serving you again at BSC Textiles Belagavi!\n\nBest Regards,\nBSC Team`;
-    }
-
-    const encodedText = encodeURIComponent(message);
-    const link = `https://wa.me/91${cleanMobile}?text=${encodedText}`;
-    window.open(link, '_blank');
   };
 
   const handleDownloadFeedbackCSV = () => {
@@ -152,39 +140,46 @@ export default function FeedbackList() {
   };
 
   return (
-    <div className="page fade-in">
-      <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ padding: '24px 32px', width: '100%' }} className="fade-in">
+      {/* Top Page Header Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="outfit" style={{ fontSize: '24px', fontWeight: 'bold' }}>Customer Voice & Feedback List</h1>
-          <p style={{ color: 'var(--ink-60)', fontSize: '14px', marginTop: '4px' }}>Review and manage customer feedback records and call follow-up desk</p>
+          <h1 className="outfit" style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.3px' }}>
+            Customer Voice & Feedback List
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+            Review customer CSI experience entries and manage negative feedback call desk
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'var(--border-l)', borderRadius: '20px', padding: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '4px' }}>
             <button
               onClick={() => setActiveTab('all')}
               style={{
-                padding: '8px 18px',
-                borderRadius: '20px',
-                fontSize: '13px',
-                fontWeight: 600,
-                background: activeTab === 'all' ? 'var(--navy)' : 'transparent',
-                color: activeTab === 'all' ? '#fff' : 'var(--ink-60)',
-                transition: 'background 0.15s'
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                background: activeTab === 'all' ? '#4F46E5' : 'transparent',
+                color: activeTab === 'all' ? '#FFFFFF' : '#64748B',
+                border: 'none',
+                cursor: 'pointer'
               }}
             >
-              📋 All Feedbacks
+              📋 All Feedbacks ({feedbacks.length})
             </button>
             <button
               onClick={() => setActiveTab('queue')}
               style={{
-                padding: '8px 18px',
-                borderRadius: '20px',
-                fontSize: '13px',
-                fontWeight: 600,
-                background: activeTab === 'queue' ? 'var(--navy)' : 'transparent',
-                color: activeTab === 'queue' ? '#fff' : 'var(--ink-60)',
-                transition: 'background 0.15s'
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                background: activeTab === 'queue' ? '#4F46E5' : 'transparent',
+                color: activeTab === 'queue' ? '#FFFFFF' : '#64748B',
+                border: 'none',
+                cursor: 'pointer'
               }}
             >
               📞 Call Queue ({queue.length})
@@ -198,236 +193,260 @@ export default function FeedbackList() {
               style={{
                 padding: '9px 18px',
                 borderRadius: '10px',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 700,
                 background: '#10B981',
                 color: '#FFFFFF',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(16,185,129,0.3)'
+                boxShadow: '0 2px 6px rgba(16,185,129,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
               📥 Export CSV Report
             </button>
           )}
         </div>
-      </header>
+      </div>
 
-      {error && <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>}
-      {success && <div className="alert alert-success" style={{ display: 'block' }}>{success}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
 
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
-          <div className="spinner"></div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+          <div className="spinner" style={{ width: '28px', height: '28px' }} />
         </div>
       ) : activeTab === 'all' ? (
-        /* Tab 1: All Feedbacks table */
-        <section className="glass-card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ background: 'var(--navy)', color: '#fff', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px' }}>Date</th>
-                  <th style={{ padding: '12px 16px' }}>Guest Name</th>
-                  <th style={{ padding: '12px 16px' }}>Location</th>
-                  <th style={{ padding: '12px 16px' }}>CSI (Rating)</th>
-                  <th style={{ padding: '12px 16px' }}>Comment Voice</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {feedbacks.length > 0 ? (
-                  feedbacks.map((f) => (
-                    <tr key={f.id} style={{ borderBottom: '1px solid var(--border-l)' }}>
-                      <td style={{ padding: '12px 16px', fontWeight: 'bold' }}>{f.date}</td>
-                      <td style={{ padding: '12px 16px' }}>{f.custName || 'Anonymous'}</td>
-                      <td style={{ padding: '12px 16px' }}>{f.area}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          fontWeight: 'bold',
-                          color: f.q0?.toLowerCase().includes('excellent') || f.q0?.toLowerCase().includes('good') ? 'var(--green)' : 'var(--crimson)'
-                        }}>
+        /* Full Width Table Card */
+        <div className="glass-card" style={{ padding: '24px', width: '100%' }}>
+          {feedbacks.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#FAF7F2', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>💬</div>
+              <p style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A' }}>No customer feedback entries collected yet</p>
+              <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+                Feedback submitted via QR code or greeter desk will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="data-table-wrap" style={{ width: '100%' }}>
+              <table className="data-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Guest Name</th>
+                    <th>Location / Section</th>
+                    <th>Rating (Q0)</th>
+                    <th>Customer Voice Note</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feedbacks.map((f) => (
+                    <tr key={f.id}>
+                      <td className="mono" style={{ fontWeight: 800, color: '#0F172A', fontSize: '12px' }}>
+                        {f.date}
+                      </td>
+                      <td style={{ fontWeight: 700, color: '#0F172A' }}>
+                        {f.custName || 'Anonymous Guest'}
+                        {f.custMobile && <div className="mono" style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>{f.custMobile}</div>}
+                      </td>
+                      <td style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>
+                        {f.area || 'Ground Floor'}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: f.q0 === 'Excellent' || f.q0 === 'Good' ? '#D1FAE5' : f.q0 === 'Poor' || f.q0 === 'Very Poor' ? '#FEE2E2' : '#FEF3C7',
+                            color: f.q0 === 'Excellent' || f.q0 === 'Good' ? '#059669' : f.q0 === 'Poor' || f.q0 === 'Very Poor' ? '#DC2626' : '#D97706'
+                          }}
+                        >
                           {f.q0 || 'N/A'}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontStyle: 'italic', color: 'var(--ink-60)' }}>
-                        {f.yourVoice || '—'}
+                      <td style={{ fontSize: '13px', color: '#334155', fontStyle: 'italic', maxWidth: '340px' }}>
+                        {f.yourVoice ? `"${f.yourVoice}"` : '—'}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '10px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          background: f.status === 'closed' ? 'var(--green-l)' : 'var(--orange-l)',
-                          color: f.status === 'closed' ? 'var(--green)' : 'var(--orange)'
-                        }}>
-                          {f.status.toUpperCase()}
+                      <td>
+                        <span
+                          style={{
+                            background: f.status === 'resolved' ? '#D1FAE5' : '#EEF2FF',
+                            color: f.status === 'resolved' ? '#059669' : '#4F46E5',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          {f.status || 'NEW'}
                         </span>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-30)' }}>
-                      No feedback logs available.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : (
-        /* Tab 2: Call Queue Cards list */
-        <section style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-          {queue.length > 0 ? (
-            queue.map((item) => (
-              <div
-                key={item.id}
-                className="card"
-                style={{
-                  padding: '16px',
-                  border: '1.5px solid var(--border)',
-                  background: '#fff',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '16px'
-                }}
-              >
-                <div>
-                  <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: 'var(--navy)' }}>
-                    👤 {item.feedback.custName || 'Anonymous Guest'}
-                  </h4>
-                  <div style={{ fontSize: '12px', color: 'var(--ink-60)', marginTop: '4px' }}>
-                    📱 Mobile: {item.feedback.custMobile || 'N/A'} | 📅 Date: {item.feedback.date}
-                  </div>
-                  <div style={{ marginTop: '10px', padding: '10px', background: 'var(--crimson-l)', borderRadius: '8px', border: '1px solid rgba(192,57,43,0.1)' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--crimson)' }}>
-                      ⚠️ Issue reported:
-                    </p>
-                    <p style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--ink)' }}>
-                      "{item.feedback.yourVoice || 'Unsatisfactory rating provided.'}"
-                    </p>
-                  </div>
-                  {item.callAttempts > 0 && (
-                    <div style={{ fontSize: '11px', color: 'var(--orange)', fontWeight: 'bold', marginTop: '8px' }}>
-                      🔄 Call attempts: {item.callAttempts} | Note: {item.callNote || '—'}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
-                  <button
-                    onClick={() => handleOpenCallModal(item)}
-                    className="btn btn-teal btn-sm"
-                  >
-                    📞 Update Call Outcome
-                  </button>
-                  {item.feedback.custMobile && (
-                    <button
-                      onClick={() => triggerWhatsApp(item.feedback.custMobile!, item.feedback.custName || '', item.callStatus || '')}
-                      className="btn btn-ghost btn-sm"
-                      style={{ color: '#25D366', borderColor: '#25D366' }}
-                    >
-                      💬 Send WhatsApp message
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="card" style={{ padding: '40px', textAlign: 'center', border: '1.5px solid var(--border)' }}>
-              <h3 className="serif" style={{ color: 'var(--green)' }}>🎉 Clean Queue</h3>
-              <p style={{ fontSize: '13px', color: 'var(--ink-60)', marginTop: '6px' }}>
-                There are no negative feedback call entries requiring attention.
-              </p>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </section>
+        </div>
+      ) : (
+        /* Call Queue Table Card */
+        <div className="glass-card" style={{ padding: '24px', width: '100%' }}>
+          {queue.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#FAF7F2', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📞</div>
+              <p style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A' }}>No pending negative follow-up calls in queue</p>
+              <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+                All negative feedback entries have been resolved!
+              </p>
+            </div>
+          ) : (
+            <div className="data-table-wrap" style={{ width: '100%' }}>
+              <table className="data-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Customer Name</th>
+                    <th>Phone</th>
+                    <th>Issue Summary</th>
+                    <th>Attempts</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queue.map((q) => (
+                    <tr key={q.id}>
+                      <td className="mono" style={{ fontWeight: 800, color: '#0F172A', fontSize: '12px' }}>
+                        {q.feedback?.date}
+                      </td>
+                      <td style={{ fontWeight: 700, color: '#0F172A' }}>
+                        {q.feedback?.custName || 'Guest'}
+                      </td>
+                      <td className="mono" style={{ fontSize: '12px', color: '#4F46E5', fontWeight: 700 }}>
+                        {q.feedback?.custMobile || 'N/A'}
+                      </td>
+                      <td style={{ fontSize: '12px', color: '#475569', maxWidth: '280px' }}>
+                        {q.feedback?.yourVoice || 'Low CSI rating submitted'}
+                      </td>
+                      <td className="mono" style={{ fontSize: '12px', textAlign: 'center' }}>
+                        {q.callAttempts}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            background: q.isDone ? '#D1FAE5' : '#FEF3C7',
+                            color: q.isDone ? '#059669' : '#D97706',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            padding: '3px 8px',
+                            borderRadius: '6px'
+                          }}
+                        >
+                          {q.callStatus || (q.isDone ? 'RESOLVED' : 'PENDING')}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => handleOpenCallModal(q)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            background: '#4F46E5',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📞 Follow Up
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Call update Modal overlay */}
+      {/* Call Update Modal */}
       {editingItem && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px'
-        }}>
-          <form onSubmit={handleSaveCallStatus} className="card" style={{ padding: '24px', maxWidth: '400px', border: '1px solid var(--border)' }}>
-            <h3 className="serif" style={{ fontSize: '20px', marginBottom: '16px' }}>
-              Record Call Outcome
-            </h3>
-
-            <div className="field">
-              <label>Call Status Outcome</label>
-              <select value={callStatus} onChange={(e) => setCallStatus(e.target.value)}>
-                <option value="issue_resolved">✅ Concern Resolved</option>
-                <option value="will_visit">🗓️ Promised Visit</option>
-                <option value="no_answer">📞 Ringing / No Answer</option>
-                <option value="not_reachable">📵 Switch Off / Unreachable</option>
-                <option value="not_satisfied">❌ Refused Resolution</option>
-                <option value="thanked">🙏 Thank Call (Closed)</option>
-              </select>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(15, 23, 42, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div className="glass-card fade-in" style={{ width: '460px', maxWidth: '100%', padding: '24px', background: '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                📞 Update Call Follow-up Status
+              </h3>
+              <button onClick={() => setEditingItem(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div className="field">
-              <label>Telecaller Summary Notes</label>
-              <textarea
-                placeholder="Details of call discussion..."
-                value={callNote}
-                onChange={(e) => setCallNote(e.target.value)}
-                style={{ minHeight: '60px' }}
-              />
-            </div>
+            <form onSubmit={handleSaveCallStatus}>
+              <div className="field">
+                <label>Call Status Outcome <span className="req">*</span></label>
+                <select value={callStatus} onChange={(e) => setCallStatus(e.target.value)}>
+                  <option value="issue_resolved">✅ Issue Resolved (Satisfied)</option>
+                  <option value="customer_unreachable">📵 Customer Unreachable</option>
+                  <option value="followup_required">📅 Follow-up Required Later</option>
+                  <option value="escalated_to_management">🚨 Escalated to Store Manager</option>
+                </select>
+              </div>
 
-            <div className="field">
-              <label>Follow-up Date (Optional)</label>
-              <input
-                type="date"
-                value={followupDate}
-                onChange={(e) => setFollowupDate(e.target.value)}
-              />
-            </div>
+              <div className="field">
+                <label>Call Log Notes / Customer Response</label>
+                <textarea
+                  rows={3}
+                  placeholder="Enter notes from the call..."
+                  value={callNote}
+                  onChange={(e) => setCallNote(e.target.value)}
+                />
+              </div>
 
-            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-              <input
-                id="escalated"
-                type="checkbox"
-                checked={escalated}
-                onChange={(e) => setEscalated(e.target.checked)}
-                style={{ width: 'auto' }}
-              />
-              <label htmlFor="escalated" style={{ textTransform: 'none', margin: 0, fontSize: '13px' }}>
-                Escalate issue to management
-              </label>
-            </div>
+              <div className="field">
+                <label>Follow-up Date (If required)</label>
+                <input
+                  type="date"
+                  value={followupDate}
+                  onChange={(e) => setFollowupDate(e.target.value)}
+                />
+              </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setEditingItem(null)}
-                className="btn btn-ghost"
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingCall}
-                className="btn btn-teal"
-                style={{ flex: 2 }}
-              >
-                {savingCall ? 'Saving...' : '💾 Save Status'}
-              </button>
-            </div>
-          </form>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCall}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#4F46E5', border: 'none', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {savingCall ? 'Saving...' : '💾 Save Status'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
