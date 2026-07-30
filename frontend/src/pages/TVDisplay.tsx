@@ -104,45 +104,78 @@ export default function TVDisplay() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        flex: 1,
-        background: '#F8FAFC',
+        minHeight: '85vh',
+        background: '#FAF7F2',
         color: '#0F172A',
-        padding: '24px'
+        padding: '24px',
+        fontFamily: "'Inter', sans-serif"
       }} className="fade-in">
-        <form onSubmit={handlePinSubmit} className="glass-card" style={{ padding: '32px', maxWidth: '400px', border: '1px solid #E2E8F0', textAlign: 'center', background: '#FFFFFF' }}>
-          <h2 className="outfit" style={{ fontSize: '24px', color: '#0F172A', marginBottom: '8px' }}>📺 TV Display Scoreboard</h2>
-          <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
+        <form onSubmit={handlePinSubmit} style={{
+          padding: '36px',
+          maxWidth: '440px',
+          width: '100%',
+          border: '1px solid #EAE5DC',
+          borderRadius: '20px',
+          textAlign: 'center',
+          background: '#FFFFFF',
+          boxShadow: '0 20px 40px -15px rgba(0,0,0,0.07)'
+        }}>
+          <div style={{ fontSize: '36px', marginBottom: '12px' }}>📺</div>
+          <h2 className="outfit" style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
+            TV Display Scoreboard
+          </h2>
+          <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px', lineHeight: 1.5 }}>
             Enter the store TV board PIN to unlock the live scoreboard
           </p>
 
-          <div style={{ padding: '10px 14px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', color: '#1D4ED8', fontWeight: 600 }}>
-            🔑 Master TV PIN: <span style={{ fontFamily: 'monospace', fontSize: '15px' }}>9911</span> (or Staff PIN: <span style={{ fontFamily: 'monospace' }}>1234</span>)
+          <div style={{
+            padding: '12px 16px',
+            background: '#EFF6FF',
+            border: '1px solid #BFDBFE',
+            borderRadius: '10px',
+            marginBottom: '24px',
+            fontSize: '13px',
+            color: '#1D4ED8',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}>
+            🔑 Master TV PIN: <span className="mono" style={{ fontSize: '15px', fontWeight: 800 }}>9911</span> (or Staff PIN: <span className="mono" style={{ fontWeight: 800 }}>1234</span>)
           </div>
 
-          {error && <div className="alert alert-error" style={{ display: 'block' }}>{error}</div>}
+          {error && <div className="alert alert-error" style={{ display: 'block', marginBottom: '16px' }}>{error}</div>}
 
           <div className="field">
             <input
               type="password"
-              placeholder="4-Digit PIN"
+              placeholder="4 - Digit  P I N"
               maxLength={4}
               value={pin}
               onChange={(e) => setPin(e.target.value)}
+              autoFocus
               style={{
                 textAlign: 'center',
-                fontSize: '24px',
-                letterSpacing: '12px',
-                padding: '12px',
-                background: '#F8FAFC',
+                fontSize: '22px',
+                fontWeight: 700,
+                letterSpacing: '10px',
+                padding: '14px',
+                background: '#FFFFFF',
                 color: '#0F172A',
                 border: '1.5px solid #CBD5E1',
-                borderRadius: '8px'
+                borderRadius: '10px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
               }}
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '16px' }}>
-            🔓 Unlock Live TV Board
+          <button
+            type="submit"
+            className="btn btn-primary btn-full btn-lg"
+            style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)', marginTop: '12px' }}
+          >
+            🔒 Unlock Live TV Board
           </button>
         </form>
       </div>

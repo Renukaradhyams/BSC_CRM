@@ -43,123 +43,157 @@ export default function CashLogin({ onAuthenticated }: CashLoginProps) {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      flex: 1,
-      background: '#1E2D5A',
-      color: '#fff',
-      padding: '40px 24px'
+      minHeight: '85vh',
+      background: '#FAF7F2',
+      color: '#0F172A',
+      padding: '40px 24px',
+      fontFamily: "'Inter', sans-serif"
     }} className="fade-in">
       <div style={{
-        width: '96px',
-        height: '96px',
-        background: '#fff',
-        borderRadius: '22px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '20px',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-        padding: '6px'
-      }}>
-        <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#1E2D5A' }}>BSC</span>
-      </div>
-      
-      <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '4px' }}>BSC BELAGAVI</h2>
-      <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', marginBottom: '32px' }}>
-        The Textile Mall · Cash Settlement
-      </p>
-
-      {/* PIN dots status display */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              width: '14px',
-              height: '14px',
-              borderRadius: '50%',
-              background: i < pin.length ? '#fff' : 'rgba(255,255,255,0.2)',
-              border: '2px solid rgba(255,255,255,0.35)',
-              transition: 'all 0.15s'
-            }}
-          />
-        ))}
-      </div>
-
-      <div style={{ color: '#ff7675', fontSize: '13px', minHeight: '22px', marginBottom: '24px' }}>
-        {error}
-      </div>
-
-      {/* Numeric PIN Pad Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '14px',
         width: '100%',
-        maxWidth: '280px'
+        maxWidth: '420px',
+        background: '#FFFFFF',
+        borderRadius: '20px',
+        border: '1px solid #EAE5DC',
+        padding: '36px 28px',
+        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.07)',
+        textAlign: 'center'
       }}>
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+        <div style={{
+          width: '72px',
+          height: '72px',
+          background: '#1A233D',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 16px auto',
+          boxShadow: '0 4px 12px rgba(26,35,61,0.2)'
+        }}>
+          <span style={{ fontSize: '24px', fontWeight: 800, color: '#FFFFFF' }}>💰</span>
+        </div>
+
+        <h2 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A', marginBottom: '4px' }}>
+          Cash Settlement Portal
+        </h2>
+        <p style={{ color: '#64748B', fontSize: '13px', marginBottom: '24px' }}>
+          BSC Belagavi · Enter Cashier 4-Digit PIN
+        </p>
+
+        {/* PIN dots status display */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginBottom: '16px' }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: '40px',
+                height: '46px',
+                borderRadius: '10px',
+                border: '2px solid #CBD5E1',
+                background: i < pin.length ? '#4F46E5' : '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                fontWeight: 800,
+                color: '#FFFFFF',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {i < pin.length ? '●' : ''}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ color: '#EF4444', fontSize: '13px', minHeight: '22px', marginBottom: '16px', fontWeight: 600 }}>
+          {error}
+        </div>
+
+        {/* Numeric PIN Pad Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '12px',
+          width: '100%',
+          maxWidth: '280px',
+          margin: '0 auto'
+        }}>
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+            <button
+              key={num}
+              type="button"
+              onClick={() => handleKeyTap(num)}
+              disabled={submitting}
+              style={{
+                height: '54px',
+                borderRadius: '12px',
+                background: '#FAF7F2',
+                color: '#0F172A',
+                fontSize: '20px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                border: '1px solid #EAE5DC',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {num}
+            </button>
+          ))}
           <button
-            key={num}
             type="button"
-            onClick={() => handleKeyTap(num)}
+            onClick={() => setPin('')}
             disabled={submitting}
             style={{
-              height: '64px',
-              borderRadius: '14px',
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              fontSize: '24px',
-              fontWeight: 'bold',
+              height: '54px',
+              borderRadius: '12px',
+              background: '#FEE2E2',
+              color: '#EF4444',
+              fontSize: '12px',
+              fontWeight: 700,
               cursor: 'pointer',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              border: '1px solid #FCA5A5'
             }}
           >
-            {num}
+            Clear
           </button>
-        ))}
-        <div /> {/* blank grid slot */}
-        <button
-          type="button"
-          onClick={() => handleKeyTap('0')}
-          disabled={submitting}
-          style={{
-            height: '64px',
-            borderRadius: '14px',
-            background: 'rgba(255,255,255,0.1)',
-            color: '#fff',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          0
-        </button>
-        <button
-          type="button"
-          onClick={handleBackspace}
-          disabled={submitting}
-          style={{
-            height: '64px',
-            borderRadius: '14px',
-            background: 'rgba(255,255,255,0.1)',
-            color: '#ff7675',
-            fontSize: '20px',
-            cursor: 'pointer',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          ⌫
-        </button>
+          <button
+            type="button"
+            onClick={() => handleKeyTap('0')}
+            disabled={submitting}
+            style={{
+              height: '54px',
+              borderRadius: '12px',
+              background: '#FAF7F2',
+              color: '#0F172A',
+              fontSize: '20px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: '1px solid #EAE5DC'
+            }}
+          >
+            0
+          </button>
+          <button
+            type="button"
+            onClick={handleBackspace}
+            disabled={submitting}
+            style={{
+              height: '54px',
+              borderRadius: '12px',
+              background: '#F1F5F9',
+              color: '#475569',
+              fontSize: '18px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid #CBD5E1'
+            }}
+          >
+            ⌫
+          </button>
+        </div>
       </div>
     </div>
   );
