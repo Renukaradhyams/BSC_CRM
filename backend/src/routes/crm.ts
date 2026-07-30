@@ -1,5 +1,5 @@
 import express from 'express';
-import { getDashboard, getFootfall, saveFootfall, saveDailyBills, getFeedbackQuestions, saveFeedback, getCallQueue, updateCallStatus, getDiverts, createDivert, updateDivert, getDivertReasons, sendDER, getSettings, updateSettings, getSections, getUsers, createUser, createSection, deleteSection, resetUserPassword, getGreeters } from '../controllers/crmController';
+import { getDashboard, getFootfall, saveFootfall, saveDailyBills, getFeedbackQuestions, saveFeedback, getCallQueue, updateCallStatus, getDiverts, createDivert, updateDivert, getDivertReasons, sendDER, getSettings, updateSettings, getSections, getUsers, createUser, createSection, deleteSection, resetUserPassword, getGreeters, getReports, getAdminAuditLog } from '../controllers/crmController';
 import { authenticateJWT, authorizeRoles, authenticateTV } from '../middleware/auth';
 
 const router = express.Router();
@@ -43,6 +43,12 @@ router.get('/greeters', getGreeters); // Public list for greeter login selection
 
 // Send Email DER triggers
 router.post('/der', authenticateJWT, sendDER);
+
+// Date-range Reports endpoint
+router.get('/reports', authenticateJWT, getReports);
+
+// Admin Audit Log
+router.get('/audit-log', authenticateJWT, authorizeRoles(['super_admin', 'admin']), getAdminAuditLog);
 
 export default router;
 

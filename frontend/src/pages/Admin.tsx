@@ -22,7 +22,7 @@ interface SectionRecord {
   managerEmail: string | null;
 }
 
-type AdminTab = 'users' | 'company' | 'sections' | 'system';
+type AdminTab = 'users' | 'company' | 'sections' | 'system' | 'auditlog';
 
 export default function Admin() {
   const { settings, checkSetupStatus } = useAuth();
@@ -33,6 +33,8 @@ export default function Admin() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState<boolean>(false);
 
   // Visible Passwords reveal state: set of user IDs whose credentials are password-unmasked
   const [revealedUsers, setRevealedUsers] = useState<Set<number>>(new Set());
@@ -98,6 +100,15 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAuditLog = async () => {
+    setAuditLoading(true);
+    try {
+      const res = await api.get('/api/crm/audit-log');
+      if (res.data?.ok) setAuditLogs(res.data.logs || []);
+    } catch { /* silently ignore if not admin */ }
+    finally { setAuditLoading(false); }
   };
 
   const toggleRevealUser = (userId: number) => {
@@ -228,11 +239,15 @@ export default function Admin() {
           { id: 'users', label: '🔑 User Vault & Access', count: users.length },
           { id: 'company', label: '🏢 Store Settings' },
           { id: 'sections', label: '🏪 Floor Sections', count: sections.length },
-          { id: 'system', label: '📊 System Status' }
+          { id: 'system', label: '📊 System Status' },
+          { id: 'auditlog', label: '🔍 Audit Log' }
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as AdminTab)}
+            onClick={() => {
+              setActiveTab(tab.id as AdminTab);
+              if (tab.id === 'auditlog' && auditLogs.length === 0) fetchAuditLog();
+            }}
             style={{
               padding: '10px 18px',
               borderRadius: '10px',
@@ -614,6 +629,103 @@ export default function Admin() {
               <span className="badge badge-gold">Enabled</span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: Admin Audit Log */}
+      {activeTab === 'auditlog' && (
+        <div className="glass-card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <div>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
+                🔍 Admin Action Audit Log
+              </h3>
+              <p style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                Last 100 admin actions — user creation, settings changes, section management
+              </p>
+            </div>
+            <button
+              onClick={fetchAuditLog}
+              disabled={auditLoading}
+              style={{
+                padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              {auditLoading ? <><span className="spinner" style={{ width: '12px', height: '12px', borderTopColor: '#2563EB', borderColor: 'rgba(37,99,235,0.2)' }} /> Loading...</> : '🔄 Refresh'}
+            </button>
+          </div>
+
+          {auditLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+              <div className="spinner" style={{ width: '28px', height: '28px', borderWidth: '3px', borderTopColor: '#2563EB', borderColor: 'rgba(37,99,235,0.2)' }} />
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <div style={{
+              textAlign: 'center', padding: '60px 24px', borderRadius: '12px',
+              background: '#faf8f4', border: '1px dashed #d4c9b5'
+            }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📋</div>
+              <p style={{ fontSize: '14px', fontWeight: 600, color: '#1a2744' }}>No audit events recorded yet</p>
+              <p style={{ fontSize: '12px', color: '#8a7e6a', marginTop: '4px' }}>
+                Admin actions (create user, settings change, section management) will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Actor</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Target</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log: any, i: number) => {
+                    const actionColors: Record<string, string> = {
+                      CREATE_USER: '#16A34A', RESET_PASSWORD: '#D97706', RESET_PIN: '#D97706',
+                      UPDATE_SETTINGS: '#2563EB', CREATE_SECTION: '#0D9488', DELETE_SECTION: '#DC2626'
+                    };
+                    const color = actionColors[log.action] || '#6B7280';
+                    const ts = new Date(log.created_at);
+                    const timeStr = ts.toLocaleString('en-IN', {
+                      day: '2-digit', month: 'short', year: '2-digit',
+                      hour: '2-digit', minute: '2-digit', hour12: true
+                    });
+                    return (
+                      <tr key={log.id || i}>
+                        <td className="mono" style={{ fontSize: '11px', color: '#475569', whiteSpace: 'nowrap' }}>{timeStr}</td>
+                        <td style={{ fontWeight: 700, color: '#0F172A' }}>{log.actorName}</td>
+                        <td style={{ fontSize: '11px', textTransform: 'capitalize', color: '#475569' }}>
+                          {log.actorRole?.replace(/_/g, ' ')}
+                        </td>
+                        <td>
+                          <span style={{
+                            padding: '3px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: 700,
+                            background: `${color}18`, color, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            border: `1px solid ${color}30`, whiteSpace: 'nowrap'
+                          }}>
+                            {log.action?.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '12px', color: '#1a2744', fontWeight: 600 }}>
+                          {log.targetName || log.targetId || '—'}
+                        </td>
+                        <td style={{ fontSize: '12px', color: '#64748B', fontStyle: log.details ? 'italic' : 'normal' }}>
+                          {log.details || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

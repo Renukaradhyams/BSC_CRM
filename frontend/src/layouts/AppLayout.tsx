@@ -15,6 +15,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [timeStr, setTimeStr] = useState<string>('');
   const [alertsCount, setAlertsCount] = useState<number>(0);
   const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
 
   // Live IST Clock
   useEffect(() => {
@@ -77,6 +78,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         return ['crm_manager', 'crm_staff'].includes(role);
       case 'vm-checklist':
         return ['crm_manager', 'vm'].includes(role);
+      case 'attendance':
+        return ['crm_manager', 'admin', 'super_admin', 'hr'].includes(role);
       case 'admin':
         return false;
       default:
@@ -94,6 +97,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { id: 'reports', path: '/app/reports', label: 'Reports & Analytics', icon: '📈' },
     { id: 'cash-settlement', path: '/app/cash-settlement', label: 'Cash Settlement', icon: '💰' },
     { id: 'vm-checklist', path: '/app/vm-checklist', label: 'VM Checklist', icon: '🏢' },
+    { id: 'attendance', path: '/app/attendance', label: 'Staff Attendance', icon: '🗓️' },
     { id: 'admin', path: '/app/admin', label: 'Admin Settings', icon: '⚙️' },
     { id: 'tv', path: '/app/tv', label: 'Live TV Display', icon: '📺' }
   ];
@@ -104,7 +108,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-dark)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-dark)', position: 'relative' }}>
+      {/* Mobile sidebar overlay backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            zIndex: 19, display: 'none'
+          }}
+          className="mobile-sidebar-backdrop"
+        />
+      )}
       {/* Sidebar Navigation Panel */}
       <aside
         style={{
@@ -280,8 +295,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
             boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
           }}
         >
-          {/* Breadcrumb Title */}
-          <div>
+          {/* Left: Hamburger (mobile) + Breadcrumb Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="mobile-hamburger"
+              style={{
+                background: '#F1F5F9', border: '1px solid #E2E8F0',
+                borderRadius: '8px', padding: '6px 10px', fontSize: '16px',
+                cursor: 'pointer', display: 'none'
+              }}
+              title="Toggle sidebar"
+            >
+              ☰
+            </button>
             <h1 className="outfit" style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
               {getPageTitle()}
             </h1>

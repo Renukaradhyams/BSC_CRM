@@ -22,6 +22,15 @@ export default function Feedback() {
   const [success, setSuccess] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
+  // ── Math Captcha ─────────────────────────────────────────
+  const generateCaptcha = () => {
+    const a = Math.floor(Math.random() * 9) + 1;
+    const b = Math.floor(Math.random() * 9) + 1;
+    return { a, b, answer: a + b };
+  };
+  const [captcha, setCaptcha] = useState(() => generateCaptcha());
+  const [captchaInput, setCaptchaInput] = useState<string>('');
+
   const formatDateStr = (d: Date) => {
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -86,6 +95,14 @@ export default function Feedback() {
       return;
     }
 
+    // Validate math captcha
+    if (parseInt(captchaInput, 10) !== captcha.answer) {
+      setError(`Incorrect answer to the security check. Please try again.`);
+      setCaptcha(generateCaptcha());
+      setCaptchaInput('');
+      return;
+    }
+
     try {
       setSubmitting(true);
       const payload = {
@@ -106,6 +123,8 @@ export default function Feedback() {
         setCustName('');
         setCustMobile('');
         setCustDob('');
+        setCaptchaInput('');
+        setCaptcha(generateCaptcha());
 
         // Reset answer fields
         const resetAnswers = { ...answers };
@@ -241,6 +260,30 @@ export default function Feedback() {
             type="date"
             value={custDob}
             onChange={(e) => setCustDob(e.target.value)}
+          />
+        </div>
+
+        {/* ── Math Captcha ─────────────── */}
+        <div style={{
+          background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.2)',
+          borderRadius: '10px', padding: '16px 18px', marginBottom: '16px'
+        }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            🔐 Security Check
+          </div>
+          <label style={{ fontSize: '14px', fontWeight: 600, color: '#1a2744', display: 'block', marginBottom: '10px' }}>
+            What is {captcha.a} + {captcha.b}?
+          </label>
+          <input
+            type="number"
+            placeholder="Enter the answer"
+            value={captchaInput}
+            onChange={e => setCaptchaInput(e.target.value)}
+            style={{
+              width: '140px', padding: '10px 14px', borderRadius: '8px',
+              border: '1px solid #d4c9b5', fontSize: '16px', fontFamily: 'JetBrains Mono, monospace',
+              fontWeight: 700, color: '#1a2744', background: '#FFFFFF'
+            }}
           />
         </div>
 

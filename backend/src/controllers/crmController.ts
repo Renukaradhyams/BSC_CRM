@@ -248,7 +248,7 @@ export const getSettings = async (req: Request, res: Response) => {
 };
 
 // 14. Update Settings
-export const updateSettings = async (req: Request, res: Response) => {
+export const updateSettings = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { companyName, companyLogoUrl, operatingStart, operatingEnd,
       footfallGraceMin, footfallEditCutoff, derEmail } = req.body;
@@ -270,6 +270,11 @@ export const updateSettings = async (req: Request, res: Response) => {
           footfallGraceMin, footfallEditCutoff, derEmail || null]
       );
     }
+    await logAdminAction(
+      req.user?.id || null, req.user?.name || 'Admin', req.user?.role || 'admin',
+      'UPDATE_SETTINGS', 'settings', null, companyName,
+      `Operating: ${operatingStart}-${operatingEnd}`, req.ip || null
+    );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
@@ -283,22 +288,31 @@ export const getSections = async (req: Request, res: Response) => {
 };
 
 // 16. Create Section
-export const createSection = async (req: Request, res: Response) => {
+export const createSection = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sectionId, sectionName, type, managerName, managerEmail } = req.body;
     await query(
       'INSERT INTO Section (sectionId, sectionName, type, managerName, managerEmail) VALUES (?, ?, ?, ?, ?)',
       [sectionId, sectionName, type, managerName || null, managerEmail || null]
     );
+    await logAdminAction(
+      req.user?.id || null, req.user?.name || 'Admin', req.user?.role || 'admin',
+      'CREATE_SECTION', 'section', sectionId, sectionName,
+      `Type: ${type}, Manager: ${managerName || 'none'}`, req.ip || null
+    );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
 // 17. Delete Section
-export const deleteSection = async (req: Request, res: Response) => {
+export const deleteSection = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.body;
     await query('UPDATE Section SET deleted_at = NOW() WHERE id = ?', [id]);
+    await logAdminAction(
+      req.user?.id || null, req.user?.name || 'Admin', req.user?.role || 'admin',
+      'DELETE_SECTION', 'section', String(id), null, null, req.ip || null
+    );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
@@ -349,7 +363,7 @@ export const getUsers = async (req: Request, res: Response) => {
 };
 
 // 20. Create User
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, email, password, role, sectionsAssigned, pin } = req.body;
     if (!name || !email || !password || !role) {
@@ -361,12 +375,17 @@ export const createUser = async (req: Request, res: Response) => {
       'INSERT INTO User (name, email, password, role, sectionsAssigned, pin, plainPassword, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)',
       [name, email, hashedPassword, role, sectionsAssigned || 'ALL', userPin, password]
     );
+    await logAdminAction(
+      req.user?.id || null, req.user?.name || 'Admin', req.user?.role || 'admin',
+      'CREATE_USER', 'user', email, name,
+      `Role: ${role}, Sections: ${sectionsAssigned || 'ALL'}`, req.ip || null
+    );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
 // 21. Reset User Password / PIN
-export const resetUserPassword = async (req: Request, res: Response) => {
+export const resetUserPassword = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id, newPassword, newPin } = req.body;
     if (!id || (!newPassword && !newPin)) {
@@ -381,6 +400,11 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     } else if (newPin) {
       await query('UPDATE User SET pin = ? WHERE id = ?', [newPin, id]);
     }
+    await logAdminAction(
+      req.user?.id || null, req.user?.name || 'Admin', req.user?.role || 'admin',
+      newPin && !newPassword ? 'RESET_PIN' : 'RESET_PASSWORD', 'user', String(id), null,
+      newPin && !newPassword ? 'PIN changed' : 'Password reset', req.ip || null
+    );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
@@ -395,3 +419,129 @@ export const getGreeters = async (req: Request, res: Response) => {
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
+// ── Audit Log Helper ────────────────────────────────────────────────────────
+export const logAdminAction = async (
+  actorId: number | null,
+  actorName: string,
+  actorRole: string,
+  action: string,
+  targetType: string,
+  targetId: string | null,
+  targetName: string | null,
+  details: string | null,
+  ipAddress: string | null
+) => {
+  try {
+    await query(
+      `INSERT INTO AdminAuditLog (actorId, actorName, actorRole, action, targetType, targetId, targetName, details, ipAddress)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [actorId, actorName, actorRole, action, targetType, targetId, targetName, details, ipAddress]
+    );
+  } catch (err) {
+    console.error('Audit log write failed:', err);
+  }
+};
+
+// 23. Get Admin Audit Log
+export const getAdminAuditLog = async (req: Request, res: Response) => {
+  try {
+    const logs = await query(
+      'SELECT * FROM AdminAuditLog ORDER BY created_at DESC LIMIT 100'
+    );
+    return res.json({ ok: true, logs });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+
+// 24. Get Date-Range Reports
+export const getReports = async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query as { from: string; to: string };
+    if (!from || !to) {
+      return res.status(400).json({ ok: false, error: 'from and to date params required (DD/MM/YYYY)' });
+    }
+
+    // Parse DD/MM/YYYY → comparable date strings for BETWEEN using STR_TO_DATE
+    const footfallRows = await query(
+      `SELECT date, SUM(count) as totalVisitors
+       FROM FootfallEntry
+       WHERE deleted_at IS NULL
+         AND STR_TO_DATE(date, '%d/%m/%Y') BETWEEN STR_TO_DATE(?, '%d/%m/%Y') AND STR_TO_DATE(?, '%d/%m/%Y')
+       GROUP BY date ORDER BY STR_TO_DATE(date, '%d/%m/%Y') ASC`,
+      [from, to]
+    );
+
+    const billsRows = await query(
+      `SELECT date, billsCount
+       FROM DailySummary
+       WHERE deleted_at IS NULL
+         AND STR_TO_DATE(date, '%d/%m/%Y') BETWEEN STR_TO_DATE(?, '%d/%m/%Y') AND STR_TO_DATE(?, '%d/%m/%Y')
+       ORDER BY STR_TO_DATE(date, '%d/%m/%Y') ASC`,
+      [from, to]
+    );
+
+    const feedbackRows = await query(
+      `SELECT date, q0, q1, yourVoice, custName, area
+       FROM Feedback
+       WHERE deleted_at IS NULL
+         AND STR_TO_DATE(date, '%d/%m/%Y') BETWEEN STR_TO_DATE(?, '%d/%m/%Y') AND STR_TO_DATE(?, '%d/%m/%Y')`,
+      [from, to]
+    );
+
+    const divertRows = await query(
+      `SELECT status, COUNT(*) as cnt
+       FROM Divert
+       WHERE deleted_at IS NULL
+         AND STR_TO_DATE(date, '%d/%m/%Y') BETWEEN STR_TO_DATE(?, '%d/%m/%Y') AND STR_TO_DATE(?, '%d/%m/%Y')
+       GROUP BY status`,
+      [from, to]
+    );
+
+    // Compute NPS + CSI
+    let promoters = 0, detractors = 0, npsTotal = 0, csiTotal = 0;
+    feedbackRows.forEach((f: any) => {
+      if (f.q1) {
+        npsTotal++;
+        const rec = f.q1.toLowerCase();
+        if (rec.includes('yes') || rec.includes('definitely')) promoters++;
+        else if (rec.includes('no') || rec.includes('not') || rec.includes('maybe')) detractors++;
+      }
+      if (f.q0) {
+        let score = 3;
+        if (f.q0.toLowerCase().includes('excellent')) score = 5;
+        else if (f.q0.toLowerCase().includes('good')) score = 4;
+        else if (f.q0.toLowerCase().includes('average')) score = 3;
+        else if (f.q0.toLowerCase().includes('poor')) score = 2;
+        else if (f.q0.toLowerCase().includes('very poor')) score = 1;
+        csiTotal += score;
+      }
+    });
+
+    const nps = npsTotal > 0 ? Math.round(((promoters - detractors) / npsTotal) * 100) : 0;
+    const csi = feedbackRows.length > 0 ? Math.round((csiTotal / (feedbackRows.length * 5)) * 100) : 100;
+
+    const totalFootfall = footfallRows.reduce((s: number, r: any) => s + Number(r.totalVisitors), 0);
+    const totalBills = billsRows.reduce((s: number, r: any) => s + Number(r.billsCount), 0);
+
+    const divertSummary: Record<string, number> = {};
+    divertRows.forEach((r: any) => { divertSummary[r.status] = Number(r.cnt); });
+
+    return res.json({
+      ok: true,
+      from, to,
+      summary: {
+        totalFootfall,
+        totalBills,
+        conversionRate: totalFootfall > 0 ? Math.round((totalBills / totalFootfall) * 100) : 0,
+        totalFeedback: feedbackRows.length,
+        nps,
+        csi,
+        divertSummary
+      },
+      footfallByDay: footfallRows,
+      billsByDay: billsRows,
+      feedbackVoices: feedbackRows.filter((f: any) => f.yourVoice).slice(0, 20).map((f: any) => ({
+        date: f.date, name: f.custName || 'Anonymous', area: f.area, text: f.yourVoice
+      }))
+    });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};

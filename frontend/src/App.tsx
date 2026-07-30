@@ -20,6 +20,7 @@ import VmChecklist from './pages/VmChecklist';
 import Admin from './pages/Admin';
 import TVDisplay from './pages/TVDisplay';
 import Greeter from './pages/Greeter';
+import Attendance from './pages/Attendance';
 
 interface SetupGateProps {
   children: React.ReactNode;
@@ -130,6 +131,7 @@ function AppRoutes() {
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/cash-settlement" element={<CashSettlement />} />
                   <Route path="/vm-checklist" element={<VmChecklist />} />
+                  <Route path="/attendance" element={<Attendance />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="*" element={<Navigate to="/app" replace />} />
                 </Routes>

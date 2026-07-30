@@ -261,6 +261,20 @@ export async function initDb() {
     FOREIGN KEY (\`submissionId\`) REFERENCES \`VMSubmission\`(\`id\`) ON DELETE CASCADE
   )`);
 
+  await query(`CREATE TABLE IF NOT EXISTS \`AdminAuditLog\` (
+    \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+    \`actorId\` INT NULL,
+    \`actorName\` VARCHAR(255) NOT NULL,
+    \`actorRole\` VARCHAR(100) NOT NULL,
+    \`action\` VARCHAR(255) NOT NULL,
+    \`targetType\` VARCHAR(100) NOT NULL,
+    \`targetId\` VARCHAR(255) NULL,
+    \`targetName\` VARCHAR(255) NULL,
+    \`details\` TEXT NULL,
+    \`ipAddress\` VARCHAR(100) NULL,
+    \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   console.log('✅ All database tables ready.');
   await seedIfEmpty();
   await ensureGreeterUsers();
