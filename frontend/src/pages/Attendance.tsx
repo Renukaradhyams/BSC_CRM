@@ -956,6 +956,7 @@ export default function Attendance() {
                     <option value="Customer Relations">Customer Relations</option>
                     <option value="Security & Facility">Security & Facility</option>
                     <option value="Store Management">Store Management</option>
+                    <option value="Others">Others</option>
                   </select>
                 </div>
 
@@ -1588,6 +1589,7 @@ export default function Attendance() {
                     <option value="Greeter & Helpdesk">Greeter & Helpdesk</option>
                     <option value="Inventory / Stock">Inventory / Stock</option>
                     <option value="Management">Management</option>
+                    <option value="Others">Others</option>
                   </select>
                 </div>
                 <div className="field">
@@ -1704,6 +1706,7 @@ export default function Attendance() {
                     <option value="Greeter & Helpdesk">Greeter & Helpdesk</option>
                     <option value="Inventory / Stock">Inventory / Stock</option>
                     <option value="Management">Management</option>
+                    <option value="Others">Others</option>
                   </select>
                 )}
               </div>
