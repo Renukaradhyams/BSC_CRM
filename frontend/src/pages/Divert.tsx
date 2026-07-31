@@ -95,12 +95,20 @@ export default function Divert() {
         }
       }
       const reasonRes = await api.get('/api/crm/divert/reasons');
-      if (reasonRes.data && reasonRes.data.ok) {
-        setReasons(reasonRes.data.reasons || []);
-        if (reasonRes.data.reasons?.length > 0) {
-          setNewDivert(prev => ({ ...prev, reasonCode: reasonRes.data.reasons[0].reasonId }));
-        }
+      let loadedReasons = [];
+      if (reasonRes.data && reasonRes.data.ok && reasonRes.data.reasons?.length > 0) {
+        loadedReasons = reasonRes.data.reasons;
+      } else {
+        loadedReasons = [
+          { reasonId: 'R1', reasonText: 'Fabric out of stock' },
+          { reasonId: 'R2', reasonText: 'Color variant unavailable' },
+          { reasonId: 'R3', reasonText: 'Size variation mismatch' },
+          { reasonId: 'R4', reasonText: 'Price range mismatch' },
+          { reasonId: 'R5', reasonText: 'Design not available' }
+        ];
       }
+      setReasons(loadedReasons);
+      setNewDivert(prev => ({ ...prev, reasonCode: loadedReasons[0].reasonId }));
     } catch (err) {
       console.error('Failed to load divert configurations', err);
     }

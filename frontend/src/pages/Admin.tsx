@@ -38,12 +38,21 @@ export default function Admin() {
   const [auditLoading, setAuditLoading] = useState<boolean>(false);
 
   // Supervisor form state
-  const [newSupName, setNewSupName] = useState<string>('');
-  const [newSupCode, setNewSupCode] = useState<string>('');
-  const [newSupSectionName, setNewSupSectionName] = useState<string>('');
-  const [newSupFloor, setNewSupFloor] = useState<string>('Ground Floor');
-  const [newSupPin, setNewSupPin] = useState<string>('');
-  const [creatingSuper, setCreatingSupervisor] = useState<boolean>(false);
+  const [newSupName, setNewSupName] = useState('');
+  const [newSupCode, setNewSupCode] = useState('');
+  const [newSupSectionName, setNewSupSectionName] = useState('');
+  const [newSupFloor, setNewSupFloor] = useState('Ground Floor');
+  const [newSupPin, setNewSupPin] = useState('');
+  const [creatingSuper, setCreatingSupervisor] = useState(false);
+
+  // Edit Supervisor State
+  const [editingSup, setEditingSup] = useState<any>(null);
+  const [editSupName, setEditSupName] = useState<string>('');
+  const [editSupCode, setEditSupCode] = useState<string>('');
+  const [editSupSectionName, setEditSupSectionName] = useState<string>('');
+  const [editSupFloor, setEditSupFloor] = useState<string>('Ground Floor');
+  const [editSupPin, setEditSupPin] = useState<string>('');
+  const [updatingSup, setUpdatingSup] = useState<boolean>(false);
 
   // Visible Passwords reveal state: set of user IDs whose credentials are password-unmasked
   const [revealedUsers, setRevealedUsers] = useState<Set<number>>(new Set());
@@ -102,8 +111,10 @@ export default function Admin() {
       if (userRes.data?.ok) setUsers(userRes.data.users || []);
       const secRes = await api.get('/api/crm/sections');
       if (secRes.data?.ok) setSections(secRes.data.sections || []);
+      
       const supRes = await api.get('/api/attendance/supervisors');
       if (supRes.data?.ok) setSupervisors(supRes.data.supervisors || []);
+      
       const settingsRes = await api.get('/api/crm/settings');
       if (settingsRes.data?.ok && settingsRes.data.settings) {
         const s = settingsRes.data.settings;
@@ -1096,8 +1107,23 @@ export default function Admin() {
                             ••••
                           </td>
                           <td>
-                            <button
-                              onClick={async () => {
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => {
+                                  setEditingSup(sup);
+                                  setEditSupName(sup.name);
+                                  setEditSupCode(sup.sectionCode);
+                                  setEditSupSectionName(sup.sectionName || '');
+                                  setEditSupFloor(sup.floor || 'Ground Floor');
+                                  setEditSupPin(''); // Empty to keep current unless typed
+                                }}
+                                style={{
+                                  background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE',
+                                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer'
+                                }}
+                              >Edit</button>
+                              <button
+                                onClick={async () => {
                                 if (!window.confirm(`Remove supervisor "${sup.name}"?`)) return;
                                 try {
                                   const res = await api.delete(`/api/attendance/supervisors/${sup.id}`);
@@ -1114,6 +1140,7 @@ export default function Admin() {
                                 padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer'
                               }}
                             >Remove</button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1125,6 +1152,76 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* Edit Supervisor Modal */}
+      {editingSup && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15, 23, 42, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card fade-in" style={{ width: '480px', maxWidth: '100%', padding: '24px', background: '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>✏️ Edit Supervisor</h3>
+              <button onClick={() => setEditingSup(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setUpdatingSup(true);
+                setError(''); setSuccess('');
+                const res = await api.put(`/api/attendance/supervisors/${editingSup.id}`, {
+                  name: editSupName,
+                  sectionCode: editSupCode.toUpperCase(),
+                  sectionName: editSupSectionName || editSupCode,
+                  floor: editSupFloor,
+                  pin: editSupPin || undefined
+                });
+                if (res.data?.ok) {
+                  setSuccess('Supervisor updated successfully!');
+                  setEditingSup(null);
+                  const upd = await api.get('/api/attendance/supervisors');
+                  if (upd.data?.ok) setSupervisors(upd.data.supervisors || []);
+                } else {
+                  setError(res.data?.error || 'Update failed.');
+                }
+              } catch (err: any) {
+                setError(err.response?.data?.error || 'Update failed.');
+              } finally {
+                setUpdatingSup(false);
+              }
+            }}>
+              <div className="field">
+                <label>Supervisor Name <span className="req">*</span></label>
+                <input type="text" value={editSupName} onChange={(e) => setEditSupName(e.target.value)} required />
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Section Code <span className="req">*</span></label>
+                  <input type="text" value={editSupCode} onChange={(e) => setEditSupCode(e.target.value.toUpperCase())} required />
+                </div>
+                <div className="field">
+                  <label>New PIN (leave blank to keep)</label>
+                  <input type="text" value={editSupPin} onChange={(e) => setEditSupPin(e.target.value.replace(/\D/g, '').slice(0, 4))} maxLength={4} className="mono" />
+                </div>
+              </div>
+              <div className="field">
+                <label>Section Name</label>
+                <input type="text" value={editSupSectionName} onChange={(e) => setEditSupSectionName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Floor</label>
+                <select value={editSupFloor} onChange={(e) => setEditSupFloor(e.target.value)}>
+                  <option value="Ground Floor">Ground Floor</option>
+                  <option value="First Floor">First Floor</option>
+                  <option value="Second Floor">Second Floor</option>
+                  <option value="Third Floor">Third Floor</option>
+                </select>
+              </div>
+              <button type="submit" disabled={updatingSup} style={{ width: '100%', padding: '12px', borderRadius: '8px', background: '#2563EB', color: '#FFFFFF', fontWeight: 800, border: 'none', cursor: updatingSup ? 'not-allowed' : 'pointer', marginTop: '10px' }}>
+                {updatingSup ? 'Saving...' : 'Save Changes'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

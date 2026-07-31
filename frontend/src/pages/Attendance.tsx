@@ -102,6 +102,10 @@ export default function Attendance() {
   const [supervisorLoading, setSupervisorLoading] = useState<boolean>(false);
   const [supervisorError, setSupervisorError] = useState<string>('');
   const [savingSupEmpId, setSavingSupEmpId] = useState<number | null>(null);
+  
+  // Supervisor View Details State
+  const [supTeamSearch, setSupTeamSearch] = useState<string>('');
+  const [employeeDetail, setEmployeeDetail] = useState<AttendanceRecord | null>(null);
 
   // Strict 10-items-per-page Pagination State
   const [registerPage, setRegisterPage] = useState<number>(1);
@@ -1617,6 +1621,21 @@ export default function Attendance() {
                     📝 Today's Attendance — {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </h3>
                   
+                  {/* Supervisor Search */}
+                  <input
+                    type="text"
+                    placeholder="🔍 Search employee name or ID..."
+                    value={supTeamSearch}
+                    onChange={(e) => setSupTeamSearch(e.target.value)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '12px',
+                      width: '220px'
+                    }}
+                  />
+
                   {selectedSupTeamEmpIds.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                       <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Mark Selected As:</span>
@@ -1680,7 +1699,9 @@ export default function Attendance() {
                         </tr>
                       </thead>
                       <tbody>
-                        {supervisorTeam.map(r => {
+                        {supervisorTeam
+                          .filter(r => r.userName.toLowerCase().includes(supTeamSearch.toLowerCase()) || r.empNo.toLowerCase().includes(supTeamSearch.toLowerCase()))
+                          .map(r => {
                           const isSaving = savingSupEmpId === r.empId;
                           return (
                             <tr key={r.empId} style={{ background: selectedSupTeamEmpIds.includes(r.empId) ? '#EEF2FF' : 'transparent' }}>
@@ -1725,16 +1746,27 @@ export default function Attendance() {
                                 />
                               </td>
                               <td>
-                                <button
-                                  onClick={() => handleSaveSupRow(r)}
-                                  disabled={isSaving}
-                                  style={{
-                                    padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
-                                    background: '#D97706', color: '#FFFFFF', border: 'none', cursor: 'pointer'
-                                  }}
-                                >
-                                  {isSaving ? '...' : 'Save'}
-                                </button>
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button
+                                      onClick={() => handleSaveSupRow(r)}
+                                      disabled={isSaving}
+                                      style={{
+                                        padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
+                                        background: '#D97706', color: '#FFFFFF', border: 'none', cursor: 'pointer'
+                                      }}
+                                    >
+                                      {isSaving ? '...' : 'Save'}
+                                    </button>
+                                    <button
+                                      onClick={() => setEmployeeDetail(r)}
+                                      style={{
+                                        padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
+                                        background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', cursor: 'pointer'
+                                      }}
+                                    >
+                                      👁️ View
+                                    </button>
+                                  </div>
                               </td>
                             </tr>
                           );
@@ -1746,6 +1778,54 @@ export default function Attendance() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Employee Detail Modal for Supervisor */}
+      {employeeDetail && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15, 23, 42, 0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+          }}
+        >
+          <div className="glass-card fade-in" style={{ width: '400px', maxWidth: '100%', padding: '28px', background: '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div>
+                <h3 className="outfit" style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', margin: '0 0 4px 0' }}>
+                  {employeeDetail.userName}
+                </h3>
+                <span className="badge badge-gold" style={{ fontSize: '11px' }}>{employeeDetail.empNo}</span>
+              </div>
+              <button onClick={() => setEmployeeDetail(null)} style={{ background: '#F1F5F9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>✕</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                <span style={{ color: '#64748B', fontSize: '13px' }}>Department</span>
+                <span style={{ fontWeight: 700, color: '#0F172A' }}>{employeeDetail.department}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                <span style={{ color: '#64748B', fontSize: '13px' }}>Section</span>
+                <span style={{ fontWeight: 700, color: '#0F172A' }}>{employeeDetail.section}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                <span style={{ color: '#64748B', fontSize: '13px' }}>Designation</span>
+                <span style={{ fontWeight: 700, color: '#0F172A' }}>{employeeDetail.designation}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+                <span style={{ color: '#64748B', fontSize: '13px' }}>Mobile No</span>
+                <span className="mono" style={{ fontWeight: 700, color: '#2563EB' }}>{employeeDetail.phone || 'N/A'}</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setEmployeeDetail(null)}
+              style={{ width: '100%', marginTop: '24px', padding: '12px', borderRadius: '8px', background: '#0F172A', color: '#FFFFFF', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+            >
+              Close Details
+            </button>
+          </div>
         </div>
       )}
 
