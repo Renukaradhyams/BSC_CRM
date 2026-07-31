@@ -735,6 +735,7 @@ export default function Attendance() {
                   <option value="First Floor">First Floor</option>
                   <option value="Second Floor">Second Floor</option>
                   <option value="Godown">GODOWN</option>
+                  <option value="Others">Others</option>
                 </select>
               </div>
 
@@ -1604,6 +1605,7 @@ export default function Attendance() {
                     <option value="First Floor">First Floor</option>
                     <option value="Second Floor">Second Floor</option>
                     <option value="Godown">GODOWN</option>
+                    <option value="Others">Others</option>
                   </select>
                 </div>
               </div>
@@ -1737,6 +1739,7 @@ export default function Attendance() {
                     <option value="First Floor">First Floor</option>
                     <option value="Second Floor">Second Floor</option>
                     <option value="Godown">GODOWN</option>
+                    <option value="Others">Others</option>
                   </select>
                 )}
               </div>
