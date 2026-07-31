@@ -32,8 +32,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Notification State
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifDrawer, setShowNotifDrawer] = useState<boolean>(false);
-  const [notifTab, setNotifTab] = useState<'inbox' | 'compose'>('inbox');
+  const [notifTab, setNotifTab] = useState<'inbox' | 'broadcast'>('inbox');
+  const [showBroadcastModal, setShowBroadcastModal] = useState<boolean>(false);
   const [msgTitle, setMsgTitle] = useState<string>('');
+
   const [msgBody, setMsgBody] = useState<string>('');
   const [targetRole, setTargetRole] = useState<string>('ALL');
   const [sendingMsg, setSendingMsg] = useState<boolean>(false);
@@ -535,15 +537,38 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </h1>
           </div>
 
-          {/* Right Header Live Date/Time & Notification Bell Widget */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Right Header Live Date/Time, Broadcast & Notification Bell Widget */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
               <span>{dateStr}</span>
               <span className="mono" style={{ marginLeft: '10px', fontWeight: 700, color: '#0F172A' }}>{timeStr}</span>
             </div>
 
+            {isManagerOrAdmin && (
+              <button
+                onClick={() => setShowBroadcastModal(true)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '999px',
+                  background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(79,70,229,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                📢 Broadcast
+              </button>
+            )}
+
             {/* Notification Bell Icon */}
             <div style={{ position: 'relative' }}>
+
               <button
                 onClick={() => {
                   setShowNotifDrawer(!showNotifDrawer);
@@ -902,6 +927,169 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
       )}
+      {/* ========== CENTERED BROADCAST ANNOUNCEMENT MODAL ========== */}
+      {showBroadcastModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 110,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            padding: '20px'
+          }}
+          onClick={() => setShowBroadcastModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '520px',
+              maxWidth: '100%',
+              background: '#0F172A',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '20px',
+              padding: '28px',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+              color: '#FFFFFF'
+            }}
+            className="fade-in"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '40px', height: '40px', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '20px', boxShadow: '0 4px 12px rgba(79,70,229,0.4)'
+                }}>
+                  📢
+                </div>
+                <div>
+                  <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1 }}>
+                    Send Broadcast Announcement
+                  </h3>
+                  <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
+                    Publish instant notifications to staff members across the store
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBroadcastModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer',
+                  color: '#94A3B8', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {msgSuccess && (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#34D399', padding: '10px 14px', borderRadius: '8px', fontSize: '12px',
+                marginBottom: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'
+              }}>
+                ✅ {msgSuccess}
+              </div>
+            )}
+
+            <form onSubmit={async (e) => {
+              await handleSendNotification(e);
+              setTimeout(() => setShowBroadcastModal(false), 1500);
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
+                  Target Role / Audience
+                </label>
+                <select
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  style={{
+                    width: '100%', padding: '11px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.12)', fontSize: '13px', fontWeight: 700,
+                    background: '#1E293B', color: '#FFFFFF'
+                  }}
+                >
+                  <option value="ALL">📢 All Logged-in Staff</option>
+                  <option value="crm_manager">👔 CRM Managers</option>
+                  <option value="greeter">👋 Greeters</option>
+                  <option value="telecaller">📞 Telecallers</option>
+                  <option value="crm_staff">👥 CRM Staff</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
+                  Notification Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Floor Meeting at 3:00 PM"
+                  value={msgTitle}
+                  onChange={(e) => setMsgTitle(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '11px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.12)', fontSize: '13px',
+                    background: '#1E293B', color: '#FFFFFF'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
+                  Message Body
+                </label>
+                <textarea
+                  placeholder="Type full broadcast details for team members..."
+                  rows={4}
+                  value={msgBody}
+                  onChange={(e) => setMsgBody(e.target.value)}
+                  required
+                  style={{
+                    width: '100%', padding: '11px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.12)', fontSize: '13px',
+                    resize: 'vertical', background: '#1E293B', color: '#FFFFFF',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  style={{
+                    flex: 1, padding: '11px', borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                    color: '#CBD5E1', fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingMsg}
+                  style={{
+                    flex: 1.5, padding: '11px', borderRadius: '10px',
+                    background: sendingMsg ? '#334155' : 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                    color: '#FFFFFF', fontSize: '13px', fontWeight: 800,
+                    border: 'none', cursor: sendingMsg ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(79,70,229,0.35)'
+                  }}
+                >
+                  {sendingMsg ? '⏳ Sending...' : '🚀 Publish Broadcast'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

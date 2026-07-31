@@ -81,6 +81,13 @@ export default function Attendance() {
   const [supervisorError, setSupervisorError] = useState<string>('');
   const [savingSupEmpId, setSavingSupEmpId] = useState<number | null>(null);
 
+  // Pagination / Limit State
+  const [showAllRegister, setShowAllRegister] = useState<boolean>(false);
+  const [showAllEmployees, setShowAllEmployees] = useState<boolean>(false);
+
+  // Supervisors List for dropdown assignment
+  const [supervisorsList, setSupervisorsList] = useState<any[]>([]);
+
   // Employee Form & Bulk State
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [empNo, setEmpNo] = useState<string>('');
@@ -89,6 +96,7 @@ export default function Attendance() {
   const [section, setSection] = useState<string>('Sarees Division');
   const [designation, setDesignation] = useState<string>('Sales Executive');
   const [phone, setPhone] = useState<string>('');
+  const [empSupervisorCode, setEmpSupervisorCode] = useState<string>('');
   const [submittingEmp, setSubmittingEmp] = useState<boolean>(false);
   const [bulkLoading, setBulkLoading] = useState<boolean>(false);
 
@@ -100,6 +108,7 @@ export default function Attendance() {
   const [editSection, setEditSection] = useState<string>('');
   const [editDesig, setEditDesig] = useState<string>('');
   const [editPhone, setEditPhone] = useState<string>('');
+  const [editSupervisorCode, setEditSupervisorCode] = useState<string>('');
   const [updatingEmp, setUpdatingEmp] = useState<boolean>(false);
 
   const handleUpdateEmployee = async (e: React.FormEvent) => {
@@ -117,7 +126,8 @@ export default function Attendance() {
         department: editDept,
         section: editSection,
         designation: editDesig,
-        phone: editPhone
+        phone: editPhone,
+        supervisorCode: editSupervisorCode || null
       });
 
       if (res.data?.ok) {
@@ -134,6 +144,7 @@ export default function Attendance() {
       setUpdatingEmp(false);
     }
   };
+
 
   const fetchAttendance = useCallback(async () => {
     try {
@@ -164,9 +175,19 @@ export default function Attendance() {
     }
   }, []);
 
+  const fetchSupervisorsList = useCallback(async () => {
+    try {
+      const res = await api.get('/api/attendance/supervisors');
+      if (res.data?.ok) setSupervisorsList(res.data.supervisors || []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     fetchAttendance();
-  }, [fetchAttendance]);
+    fetchSupervisorsList();
+  }, [fetchAttendance, fetchSupervisorsList]);
 
   useEffect(() => {
     if (activeTab === 'employees') {
@@ -243,10 +264,11 @@ export default function Attendance() {
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!empNo || !empName || !department || !section || !designation) {
-      setError('Emp No, Name, Department, Section, and Designation are required.');
+    if (!empNo || !empName) {
+      setError('Employee No and Name are mandatory.');
       return;
     }
+
 
     try {
       setSubmittingEmp(true);
@@ -259,7 +281,8 @@ export default function Attendance() {
         department,
         section,
         designation,
-        phone
+        phone,
+        supervisorCode: empSupervisorCode || null
       });
 
       if (res.data?.ok) {
@@ -267,6 +290,7 @@ export default function Attendance() {
         setEmpNo('');
         setEmpName('');
         setPhone('');
+        setEmpSupervisorCode('');
         fetchEmployees();
         fetchAttendance();
       } else {
@@ -280,7 +304,7 @@ export default function Attendance() {
   };
 
   const handleDownloadSampleCsv = () => {
-    const csvContent = "empNo,name,department,section,designation,phone\nEMP-201,Ramesh Naik,Sales,Sarees Division,Sales Executive,9876543210\nEMP-202,Pooja Sharma,Billing,Cash Counter 2,Cashier,9876543211";
+    const csvContent = "empNo,name,department,section,designation,phone,supervisorCode\nEMP-201,Ramesh Naik,Sales,Sarees Division,Sales Executive,9876543210,SAREE-1\nEMP-202,Pooja Sharma,Billing,Cash Counter 2,Cashier,9876543211,CASH-1";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -289,6 +313,7 @@ export default function Attendance() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
 
   const handleBulkCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -314,6 +339,10 @@ export default function Attendance() {
         const secIdx = headers.indexOf('section');
         const desigIdx = headers.indexOf('designation');
         const phoneIdx = headers.indexOf('phone');
+        let supIdx = headers.indexOf('supervisorcode');
+        if (supIdx === -1) supIdx = headers.indexOf('supervisor code');
+        if (supIdx === -1) supIdx = headers.indexOf('supervisor_code');
+        if (supIdx === -1) supIdx = headers.indexOf('supervisor');
 
         if (empNoIdx === -1 || nameIdx === -1) {
           setError('CSV file must contain "empNo" and "name" column headers.');
@@ -330,10 +359,12 @@ export default function Attendance() {
               department: row[deptIdx] || 'Sales',
               section: row[secIdx] || 'Main Floor',
               designation: row[desigIdx] || 'Sales Executive',
-              phone: row[phoneIdx] || null
+              phone: row[phoneIdx] || null,
+              supervisorCode: (supIdx !== -1 && row[supIdx]) ? row[supIdx] : null
             });
           }
         }
+
 
         if (parsedEmps.length === 0) {
           setError('No valid employee rows parsed from CSV file.');
@@ -658,7 +689,10 @@ export default function Attendance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRecords.map((r) => {
+                    {((registerSearch.trim() || selectedSectionFilter !== 'ALL' || showAllRegister)
+                      ? filteredRecords
+                      : filteredRecords.slice(0, 10)
+                    ).map((r) => {
                       const isSaving = savingEmpId === r.empId;
                       return (
                         <tr key={r.empId}>
@@ -738,6 +772,21 @@ export default function Attendance() {
                 </table>
               </div>
             )}
+
+            {filteredRecords.length > 10 && !registerSearch.trim() && selectedSectionFilter === 'ALL' && (
+              <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <button
+                  onClick={() => setShowAllRegister(!showAllRegister)}
+                  style={{
+                    padding: '8px 20px', borderRadius: '8px', background: '#EEF2FF',
+                    border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: '12px', fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showAllRegister ? '▲ Show Top 10 Members Only' : `▼ Show All ${filteredRecords.length} Staff Members (Showing 10 by default)`}
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -801,6 +850,18 @@ export default function Attendance() {
               </div>
 
               <div className="field">
+                <label>Assigned Section Supervisor</label>
+                <select value={empSupervisorCode} onChange={(e) => setEmpSupervisorCode(e.target.value)}>
+                  <option value="">-- Direct / Unassigned --</option>
+                  {supervisorsList.map(sup => (
+                    <option key={sup.id} value={sup.sectionCode}>
+                      {sup.name} ({sup.sectionCode} — {sup.sectionName || sup.floor})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
                 <label>Designation <span className="req">*</span></label>
                 <input
                   type="text"
@@ -810,6 +871,7 @@ export default function Attendance() {
                   required
                 />
               </div>
+
 
               <div className="field">
                 <label>Phone Number (Optional)</label>
@@ -918,80 +980,91 @@ export default function Attendance() {
                     <tr>
                       <th>Emp No</th>
                       <th>Name</th>
-                      <th>Department</th>
-                      <th>Section</th>
+                      <th>Department / Section</th>
+                      <th>Supervisor Code</th>
                       <th>Designation</th>
                       <th>Phone</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {employees
-                      .filter(emp => {
+                    {(() => {
+                      const filtered = employees.filter(emp => {
                         if (!employeeSearch.trim()) return true;
                         const q = employeeSearch.toLowerCase();
                         return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q);
-                      })
-                      .map(emp => (
-                      <tr key={emp.id}>
-                        <td className="mono" style={{ fontWeight: 800, color: '#4F46E5' }}>
-                          {emp.empNo}
-                        </td>
-                        <td style={{ fontWeight: 700, color: '#0F172A' }}>
-                          {emp.name}
-                        </td>
-                        <td style={{ fontSize: '12px' }}>{emp.department}</td>
-                        <td style={{ fontSize: '12px' }}>{emp.section}</td>
-                        <td style={{ fontSize: '12px', fontWeight: 600 }}>{emp.designation}</td>
-                        <td className="mono" style={{ fontSize: '12px', color: '#64748B' }}>
-                          {emp.phone || '—'}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => {
-                                setEditingEmp(emp);
-                                setEditEmpNo(emp.empNo);
-                                setEditName(emp.name);
-                                setEditDept(emp.department);
-                                setEditSection(emp.section);
-                                setEditDesig(emp.designation);
-                                setEditPhone(emp.phone || '');
-                              }}
-                              style={{
-                                background: '#EEF2FF',
-                                color: '#4F46E5',
-                                border: '1px solid #C7D2FE',
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ✏️ Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                              style={{
-                                background: '#FEE2E2',
-                                color: '#EF4444',
-                                border: '1px solid #FCA5A5',
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                      });
+                      const displayed = (employeeSearch.trim() || showAllEmployees) ? filtered : filtered.slice(0, 10);
+                      return displayed.map(emp => (
+                        <tr key={emp.id}>
+                          <td className="mono" style={{ fontWeight: 800, color: '#4F46E5' }}>
+                            {emp.empNo}
+                          </td>
+                          <td style={{ fontWeight: 700, color: '#0F172A' }}>
+                            {emp.name}
+                          </td>
+                          <td style={{ fontSize: '12px' }}>
+                            <div>{emp.department}</div>
+                            <div style={{ fontSize: '11px', color: '#94A3B8' }}>{emp.section}</div>
+                          </td>
+                          <td className="mono" style={{ fontSize: '12px', fontWeight: 800, color: emp.supervisorCode ? '#D97706' : '#94A3B8' }}>
+                            {emp.supervisorCode || '— Direct'}
+                          </td>
+                          <td style={{ fontSize: '12px', fontWeight: 600 }}>{emp.designation}</td>
+                          <td className="mono" style={{ fontSize: '12px', color: '#64748B' }}>
+                            {emp.phone || '—'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                onClick={() => {
+                                  setEditingEmp(emp);
+                                  setEditEmpNo(emp.empNo);
+                                  setEditName(emp.name);
+                                  setEditDept(emp.department);
+                                  setEditSection(emp.section);
+                                  setEditDesig(emp.designation);
+                                  setEditPhone(emp.phone || '');
+                                  setEditSupervisorCode(emp.supervisorCode || '');
+                                }}
+                                style={{
+                                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                  background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', cursor: 'pointer'
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                                style={{
+                                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                  background: '#FEE2E2', color: '#EF4444', border: '1px solid #FCA5A5', cursor: 'pointer'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {employees.length > 10 && !employeeSearch.trim() && (
+              <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <button
+                  onClick={() => setShowAllEmployees(!showAllEmployees)}
+                  style={{
+                    padding: '8px 20px', borderRadius: '8px', background: '#EEF2FF',
+                    border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: '12px', fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showAllEmployees ? '▲ Show Top 10 Employees Only' : `▼ Show All ${employees.length} Employees (Showing 10 by default)`}
+                </button>
               </div>
             )}
           </div>
@@ -1281,6 +1354,18 @@ export default function Attendance() {
                 </div>
               </div>
 
+              <div className="field">
+                <label>Assigned Section Supervisor</label>
+                <select value={editSupervisorCode} onChange={(e) => setEditSupervisorCode(e.target.value)}>
+                  <option value="">-- Direct / Unassigned --</option>
+                  {supervisorsList.map(sup => (
+                    <option key={sup.id} value={sup.sectionCode}>
+                      {sup.name} ({sup.sectionCode} — {sup.sectionName || sup.floor})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="field-row">
                 <div className="field">
                   <label>Designation</label>
@@ -1291,6 +1376,7 @@ export default function Attendance() {
                   <input type="text" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
                 </div>
               </div>
+
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                 <button

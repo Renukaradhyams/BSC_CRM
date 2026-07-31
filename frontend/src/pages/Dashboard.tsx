@@ -80,6 +80,13 @@ export default function Dashboard() {
     nps: 0,
     csi: 0,
   });
+  const [attendanceStats, setAttendanceStats] = useState({
+    total: 0,
+    present: 0,
+    absent: 0,
+    leave: 0,
+    rate: 0
+  });
   const [slots, setSlots] = useState<FootfallSlot[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -114,12 +121,27 @@ export default function Dashboard() {
           setSlots(DEFAULT_SLOTS);
         }
       }
+
+      // Fetch today's staff attendance summary
+      const d = new Date();
+      const ddmmyyyy = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      const attRes = await api.get(`/api/attendance?date=${ddmmyyyy}`);
+      if (attRes.data?.ok && Array.isArray(attRes.data.records)) {
+        const recs = attRes.data.records;
+        const tot = recs.length;
+        const pres = recs.filter((r: any) => ['present', 'late', 'half_day'].includes(r.status)).length;
+        const abs = recs.filter((r: any) => r.status === 'absent').length;
+        const lve = recs.filter((r: any) => r.status === 'leave').length;
+        const rateVal = tot > 0 ? Math.round((pres / tot) * 100) : 0;
+        setAttendanceStats({ total: tot, present: pres, absent: abs, leave: lve, rate: rateVal });
+      }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
       setLoading(false);
     }
   };
+
 
   const currentHour = new Date().getHours();
 
@@ -228,6 +250,55 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      {/* Staff Attendance Telemetry Summary Row */}
+      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '28px', background: '#FFFFFF' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h3 className="outfit" style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              👥 Today's Staff Attendance Summary
+            </h3>
+            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>Live presence and roster telemetry for store employees</p>
+          </div>
+          <button
+            onClick={() => navigate('/app/attendance')}
+            style={{
+              padding: '7px 16px', borderRadius: '8px', background: '#EEF2FF',
+              border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: '12px', fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            📋 Manage Attendance Roster →
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '14px' }}>
+          <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ROSTER STAFF</div>
+            <div className="mono" style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>{attendanceStats.total}</div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>total registered</div>
+          </div>
+
+          <div style={{ background: '#ECFDF5', padding: '14px', borderRadius: '10px', border: '1px solid #A7F3D0' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#047857', letterSpacing: '0.06em', textTransform: 'uppercase' }}>PRESENT TODAY</div>
+            <div className="mono" style={{ fontSize: '24px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>{attendanceStats.present}</div>
+            <div style={{ fontSize: '10px', color: '#047857', marginTop: '2px' }}>on floor active</div>
+          </div>
+
+          <div style={{ background: '#FEF2F2', padding: '14px', borderRadius: '10px', border: '1px solid #FCA5A5' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#B91C1C', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ABSENT TODAY</div>
+            <div className="mono" style={{ fontSize: '24px', fontWeight: 800, color: '#DC2626', marginTop: '4px' }}>{attendanceStats.absent}</div>
+            <div style={{ fontSize: '10px', color: '#B91C1C', marginTop: '2px' }}>unreported</div>
+          </div>
+
+          <div style={{ background: '#EFF6FF', padding: '14px', borderRadius: '10px', border: '1px solid #BFDBFE' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#1D4ED8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ATTENDANCE RATE</div>
+            <div className="mono" style={{ fontSize: '24px', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{attendanceStats.rate}%</div>
+            <div style={{ fontSize: '10px', color: '#3B82F6', marginTop: '2px' }}>daily turnout</div>
+          </div>
+        </div>
+      </div>
+
 
       {/* Main Grid: Footfall Hourly Bar Chart & Customer Feedback Voices */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '28px' }}>

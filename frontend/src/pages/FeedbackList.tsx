@@ -35,6 +35,7 @@ export default function FeedbackList() {
   const [activeTab, setActiveTab] = useState<'all' | 'queue'>('all');
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [selectedFeedbackDate, setSelectedFeedbackDate] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
@@ -187,29 +188,50 @@ export default function FeedbackList() {
           </div>
 
           {activeTab === 'all' && (
-            <button
-              onClick={handleDownloadFeedbackCSV}
-              disabled={feedbacks.length === 0}
-              style={{
-                padding: '9px 18px',
-                borderRadius: '10px',
-                fontSize: '12px',
-                fontWeight: 700,
-                background: '#10B981',
-                color: '#FFFFFF',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(16,185,129,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              📥 Export CSV Report
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', padding: '6px 12px', borderRadius: '10px', border: '1px solid #CBD5E1' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>📅 Filter Date:</span>
+                <input
+                  type="date"
+                  value={selectedFeedbackDate}
+                  onChange={(e) => setSelectedFeedbackDate(e.target.value)}
+                  style={{ border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 700, color: '#4F46E5', cursor: 'pointer' }}
+                />
+                {selectedFeedbackDate && (
+                  <button
+                    onClick={() => setSelectedFeedbackDate('')}
+                    style={{ background: '#F1F5F9', border: 'none', borderRadius: '6px', fontSize: '11px', padding: '2px 6px', color: '#64748B', cursor: 'pointer' }}
+                  >
+                    Clear Filter
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={handleDownloadFeedbackCSV}
+                disabled={feedbacks.length === 0}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(16,185,129,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                📥 Export CSV Report
+              </button>
+            </div>
           )}
         </div>
       </div>
+
 
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
@@ -243,8 +265,17 @@ export default function FeedbackList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {feedbacks.map((f) => (
+                  {feedbacks
+                    .filter(f => {
+                      if (!selectedFeedbackDate) return true;
+                      // Date in DB is DD/MM/YYYY or YYYY-MM-DD
+                      const parts = selectedFeedbackDate.split('-');
+                      const targetDdmmyyyy = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                      return f.date === targetDdmmyyyy || f.date === selectedFeedbackDate;
+                    })
+                    .map((f) => (
                     <tr key={f.id}>
+
                       <td className="mono" style={{ fontWeight: 800, color: '#0F172A', fontSize: '12px' }}>
                         {f.date}
                       </td>

@@ -115,7 +115,7 @@ input,select,textarea { font-family: inherit; outline: 0; color: var(--text-prim
   background: var(--bg-app);
 }
 
-.page-container { padding: 28px 32px; max-width: 1400px; margin: 0 auto; width: 100%; }
+.page-container { padding: 24px 32px; max-width: 1400px; margin: 0 auto; width: 100%; }
 
 /* ── Form Controls ─────────────── */
 .field { margin-bottom: 18px; }
@@ -249,6 +249,24 @@ input,select,textarea { font-family: inherit; outline: 0; color: var(--text-prim
   min-height: 620px;
 }
 
+.login-brand-side {
+  background: linear-gradient(145deg, #1A233D 0%, #0F172A 100%);
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #FFFFFF;
+  position: relative;
+}
+
+.login-form-side {
+  padding: 44px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #FFFFFF;
+}
+
 /* ── Responsive Grids Helpers ── */
 .responsive-grid-2 {
   display: grid;
@@ -283,7 +301,7 @@ input,select,textarea { font-family: inherit; outline: 0; color: var(--text-prim
 .chip-pending { background: #F3F4F6; color: var(--text-muted); border: 1px solid var(--border); }
 .chip-missed { background: var(--danger-light); color: #B91C1C; border: 1px solid var(--danger-border); }
 
-/* ── Mobile Layout Rules ────────────────────── */
+/* ── Mobile-Only Responsive Rules ────────────────── */
 @media (max-width: 768px) {
   .mobile-hamburger { display: flex !important; align-items: center; justify-content: center; }
   .mobile-sidebar-backdrop { display: block !important; }
@@ -315,16 +333,7 @@ input,select,textarea { font-family: inherit; outline: 0; color: var(--text-prim
   }
 
   /* Responsive grid collapse */
-  .responsive-grid-2, .responsive-grid-3, .responsive-grid-4 {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Force all inline 2-column flex or grid containers to stack vertically */
-  div[style*="gridTemplateColumns: '1.8fr 1fr'"],
-  div[style*="gridTemplateColumns: '1fr 1.6fr'"],
-  div[style*="gridTemplateColumns: '1.5fr 1fr'"],
-  div[style*="gridTemplateColumns: '2fr 1fr'"],
-  div[style*="gridTemplateColumns: '1fr 1fr'"] {
+  .responsive-grid-2, .responsive-grid-3, .responsive-grid-4, .mobile-stack {
     grid-template-columns: 1fr !important;
   }
 
