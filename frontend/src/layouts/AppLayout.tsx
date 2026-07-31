@@ -283,8 +283,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           flexDirection: 'column',
           flexShrink: 0,
           transition: 'width 0.25s ease',
-          zIndex: 20,
+          zIndex: mobileOpen ? 100 : 20,
           boxShadow: '4px 0 24px rgba(0,0,0,0.15)'
+
         }}
       >
         {/* Header with Brand Logo & Collapse Toggle */}
