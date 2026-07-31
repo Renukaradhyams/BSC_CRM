@@ -115,7 +115,7 @@ export default function CashForm() {
 
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 18px Cambria, serif';
-    ctx.fillText('BSC Belagavi Settlement', 20, 35);
+    ctx.fillText('BSC DAVANAGERE Settlement', 20, 35);
     ctx.font = '12px Cambria, serif';
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.fillText(`Date: ${date}`, 20, 58);

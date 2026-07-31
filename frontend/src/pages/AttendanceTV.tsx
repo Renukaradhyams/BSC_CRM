@@ -26,7 +26,7 @@ export default function AttendanceTV() {
   const [presentPage, setPresentPage] = useState<number>(0);
   const [absentPage, setAbsentPage] = useState<number>(0);
 
-  const ITEMS_PER_PAGE = 12;
+  const ITEMS_PER_PAGE = 30;
 
   // Clock
   useEffect(() => {
@@ -217,7 +217,7 @@ export default function AttendanceTV() {
       <header
         style={{
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           borderBottom: '2px solid rgba(255,255,255,0.08)',
           paddingBottom: '16px',

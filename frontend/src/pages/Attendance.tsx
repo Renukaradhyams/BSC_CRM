@@ -51,11 +51,11 @@ const inputToApi = (inputVal: string): string => {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  present:  { label: 'Present',  color: '#059669', bg: '#D1FAE5' },
-  absent:   { label: 'Absent',   color: '#DC2626', bg: '#FEE2E2' },
-  late:     { label: 'Late',     color: '#D97706', bg: '#FEF3C7' },
+  present: { label: 'Present', color: '#059669', bg: '#D1FAE5' },
+  absent: { label: 'Absent', color: '#DC2626', bg: '#FEE2E2' },
+  late: { label: 'Late', color: '#D97706', bg: '#FEF3C7' },
   half_day: { label: 'Half Day', color: '#7C3AED', bg: '#EDE9FE' },
-  leave:    { label: 'On Leave', color: '#2563EB', bg: '#EFF6FF' },
+  leave: { label: 'On Leave', color: '#2563EB', bg: '#EFF6FF' },
 };
 
 export default function Attendance() {
@@ -70,7 +70,7 @@ export default function Attendance() {
       if (storedSup) {
         const supInfo = JSON.parse(storedSup);
         setSupervisorInfo(supInfo);
-        
+
         api.get(`/api/attendance/supervisor/team?sectionCode=${supInfo.sectionCode}&date=${inputToApi(new Date())}`)
           .then(res => {
             if (res.data?.ok) {
@@ -734,6 +734,7 @@ export default function Attendance() {
                   <option value="Ground Floor">Ground Floor</option>
                   <option value="First Floor">First Floor</option>
                   <option value="Second Floor">Second Floor</option>
+                  <option value="Godown">GODOWN</option>
                 </select>
               </div>
 
@@ -923,153 +924,153 @@ export default function Attendance() {
               </h3>
 
               <form onSubmit={handleCreateEmployee}>
-              <div className="field">
-                <label>Employee No <span className="req">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g. EMP-106"
-                  value={empNo}
-                  onChange={(e) => setEmpNo(e.target.value)}
-                  required
-                />
+                <div className="field">
+                  <label>Employee No <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. EMP-106"
+                    value={empNo}
+                    onChange={(e) => setEmpNo(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Full Employee Name <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Anil Kumar"
+                    value={empName}
+                    onChange={(e) => setEmpName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Department <span className="req">*</span></label>
+                  <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+                    <option value="Sales">Sales</option>
+                    <option value="Billing & Cash">Billing & Cash</option>
+                    <option value="Visual Merchandising">Visual Merchandising</option>
+                    <option value="Inventory & Stock">Inventory & Stock</option>
+                    <option value="Customer Relations">Customer Relations</option>
+                    <option value="Security & Facility">Security & Facility</option>
+                    <option value="Store Management">Store Management</option>
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Floor Section <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sarees Division / Cash Counter 1"
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Assigned Section Supervisor</label>
+                  <select value={empSupervisorCode} onChange={(e) => setEmpSupervisorCode(e.target.value)}>
+                    <option value="">-- Direct / Unassigned --</option>
+                    {supervisorsList.map(sup => (
+                      <option key={sup.id} value={sup.sectionCode}>
+                        {sup.name} ({sup.sectionCode} — {sup.sectionName || sup.floor})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Designation <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Senior Sales Executive"
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    required
+                  />
+                </div>
+
+
+                <div className="field">
+                  <label>Phone Number (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 9845012345"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingEmp}
+                  className="btn btn-primary btn-full"
+                  style={{ background: '#4F46E5', marginTop: '8px' }}
+                >
+                  {submittingEmp ? 'Adding...' : '➕ Register Employee'}
+                </button>
+              </form>
+            </div>
+
+            {/* Bulk CSV Employee Upload Card */}
+            <div className="glass-card" style={{ padding: '24px', background: '#F8FAFC' }}>
+              <h4 className="outfit" style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📁 Bulk Employee Entry (CSV File)
+              </h4>
+              <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '16px' }}>
+                Upload multiple staff members in one click via CSV spreadsheet
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={handleDownloadSampleCsv}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: '#FFFFFF',
+                    color: '#4F46E5',
+                    border: '1px solid #C7D2FE',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  📥 Download Sample CSV Template
+                </button>
+
+                <label
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: bulkLoading ? '#CBD5E1' : '#10B981',
+                    color: '#FFFFFF',
+                    textAlign: 'center',
+                    cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                    display: 'block'
+                  }}
+                >
+                  {bulkLoading ? 'Processing Bulk CSV...' : '📤 Choose CSV File & Bulk Import'}
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleBulkCsvUpload}
+                    disabled={bulkLoading}
+                    style={{ display: 'none' }}
+                  />
+                </label>
               </div>
-
-              <div className="field">
-                <label>Full Employee Name <span className="req">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g. Anil Kumar"
-                  value={empName}
-                  onChange={(e) => setEmpName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="field">
-                <label>Department <span className="req">*</span></label>
-                <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                  <option value="Sales">Sales</option>
-                  <option value="Billing & Cash">Billing & Cash</option>
-                  <option value="Visual Merchandising">Visual Merchandising</option>
-                  <option value="Inventory & Stock">Inventory & Stock</option>
-                  <option value="Customer Relations">Customer Relations</option>
-                  <option value="Security & Facility">Security & Facility</option>
-                  <option value="Store Management">Store Management</option>
-                </select>
-              </div>
-
-              <div className="field">
-                <label>Floor Section <span className="req">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sarees Division / Cash Counter 1"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="field">
-                <label>Assigned Section Supervisor</label>
-                <select value={empSupervisorCode} onChange={(e) => setEmpSupervisorCode(e.target.value)}>
-                  <option value="">-- Direct / Unassigned --</option>
-                  {supervisorsList.map(sup => (
-                    <option key={sup.id} value={sup.sectionCode}>
-                      {sup.name} ({sup.sectionCode} — {sup.sectionName || sup.floor})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="field">
-                <label>Designation <span className="req">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g. Senior Sales Executive"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
-                  required
-                />
-              </div>
-
-
-              <div className="field">
-                <label>Phone Number (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 9845012345"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={submittingEmp}
-                className="btn btn-primary btn-full"
-                style={{ background: '#4F46E5', marginTop: '8px' }}
-              >
-                {submittingEmp ? 'Adding...' : '➕ Register Employee'}
-              </button>
-            </form>
-          </div>
-
-          {/* Bulk CSV Employee Upload Card */}
-          <div className="glass-card" style={{ padding: '24px', background: '#F8FAFC' }}>
-            <h4 className="outfit" style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              📁 Bulk Employee Entry (CSV File)
-            </h4>
-            <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '16px' }}>
-              Upload multiple staff members in one click via CSV spreadsheet
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={handleDownloadSampleCsv}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  background: '#FFFFFF',
-                  color: '#4F46E5',
-                  border: '1px solid #C7D2FE',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                📥 Download Sample CSV Template
-              </button>
-
-              <label
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  background: bulkLoading ? '#CBD5E1' : '#10B981',
-                  color: '#FFFFFF',
-                  textAlign: 'center',
-                  cursor: bulkLoading ? 'not-allowed' : 'pointer',
-                  display: 'block'
-                }}
-              >
-                {bulkLoading ? 'Processing Bulk CSV...' : '📤 Choose CSV File & Bulk Import'}
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleBulkCsvUpload}
-                  disabled={bulkLoading}
-                  style={{ display: 'none' }}
-                />
-              </label>
             </div>
           </div>
-        </div>
 
           {/* Employee Directory List */}
           <div className="glass-card" style={{ padding: '24px' }}>
@@ -1373,7 +1374,7 @@ export default function Attendance() {
 
                   {/* Numeric PIN Pad */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
-                    {['1','2','3','4','5','6','7','8','9'].map(num => (
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
                       <button
                         key={num}
                         type="button"
@@ -1600,6 +1601,7 @@ export default function Attendance() {
                     <option value="Ground Floor">Ground Floor</option>
                     <option value="First Floor">First Floor</option>
                     <option value="Second Floor">Second Floor</option>
+                    <option value="Godown">GODOWN</option>
                   </select>
                 </div>
               </div>
@@ -1731,6 +1733,7 @@ export default function Attendance() {
                     <option value="Ground Floor">Ground Floor</option>
                     <option value="First Floor">First Floor</option>
                     <option value="Second Floor">Second Floor</option>
+                    <option value="Godown">GODOWN</option>
                   </select>
                 )}
               </div>

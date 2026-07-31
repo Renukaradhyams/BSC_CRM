@@ -63,7 +63,7 @@ export default function Admin() {
   const [cashSettlementPin, setCashSettlementPin] = useState<string>('1234');
   const [vmChecklistPin, setVmChecklistPin] = useState<string>('5678');
   const [feedbackQ0Label, setFeedbackQ0Label] = useState<string>('How was your shopping experience overall?');
-  const [feedbackQ1Label, setFeedbackQ1Label] = useState<string>('Would you recommend BSC Belagavi to friends & family?');
+  const [feedbackQ1Label, setFeedbackQ1Label] = useState<string>('Would you recommend BSC DAVANAGERE to friends & family?');
   const [feedbackQ2Label, setFeedbackQ2Label] = useState<string>('How satisfied are you with our staff assistance & service?');
   const [feedbackQ3Label, setFeedbackQ3Label] = useState<string>('Any additional comments or product requirements?');
   const [allowSelfRegister, setAllowSelfRegister] = useState<boolean>(true);
@@ -118,7 +118,7 @@ export default function Admin() {
         setCashSettlementPin(s.cashSettlementPin || '1234');
         setVmChecklistPin(s.vmChecklistPin || '5678');
         setFeedbackQ0Label(s.feedbackQ0Label || 'How was your shopping experience overall?');
-        setFeedbackQ1Label(s.feedbackQ1Label || 'Would you recommend BSC Belagavi to friends & family?');
+        setFeedbackQ1Label(s.feedbackQ1Label || 'Would you recommend BSC DAVANAGERE to friends & family?');
         setFeedbackQ2Label(s.feedbackQ2Label || 'How satisfied are you with our staff assistance & service?');
         setFeedbackQ3Label(s.feedbackQ3Label || 'Any additional comments or product requirements?');
         setAllowSelfRegister(s.allowSelfRegister !== undefined ? Boolean(s.allowSelfRegister) : true);

@@ -24,7 +24,7 @@ export default function Login() {
   const [greeterList, setGreeterList] = useState<GreeterOption[]>([]);
   const [selectedGreeterName, setSelectedGreeterName] = useState<string>('');
   const [greeterPin, setGreeterPin] = useState<string>('');
-  
+
   // Supervisor PIN login state
   const [supervisorPin, setSupervisorPin] = useState<string>('');
 
@@ -233,7 +233,7 @@ export default function Login() {
             </div>
 
             <div style={{ fontSize: '11px', color: '#64748B', marginTop: '20px' }}>
-              © {new Date().getFullYear()} BSC Textiles Belagavi. All rights reserved.
+              © {new Date().getFullYear()} BSC Textiles DAVANAGERE. All rights reserved.
             </div>
           </div>
         </div>

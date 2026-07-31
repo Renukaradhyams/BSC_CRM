@@ -28,7 +28,7 @@ async function main() {
        footfallGraceMin, footfallEditCutoff, derEmail, derWhatsappNote, setupComplete)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
     [
-      'BSC Textiles Belagavi',
+      'BSC Textiles DAVANAGERE',
       'https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg',
       '10:00', '22:00', 30, '10:30',
       'manager@bsctextiles.com',
