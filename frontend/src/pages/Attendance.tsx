@@ -189,7 +189,7 @@ export default function Attendance() {
       const apiDate = inputToApi(selectedDateInput);
       
       const promises = selectedRegisterEmpIds.map(empId => 
-        api.post('/api/attendance', {
+        api.post('/api/attendance/upsert', {
           empId,
           date: apiDate,
           status: groupStatus,
@@ -234,7 +234,7 @@ export default function Attendance() {
       setSupervisorError('');
       
       const promises = selectedSupTeamEmpIds.map(empId => 
-        api.post('/api/attendance', {
+        api.post('/api/attendance/upsert', {
           empId,
           date: formatDateForApi(new Date()),
           status: supGroupStatus,
