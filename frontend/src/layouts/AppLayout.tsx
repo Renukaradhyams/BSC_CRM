@@ -199,6 +199,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       return ['pm-view', 'footfall'].includes(item);
     }
 
+    if (role === 'supervisor') {
+      return ['attendance', 'attendance-tv', 'tv'].includes(item);
+    }
+
     return ['dashboard', 'footfall', 'feedback-qr', 'divert', 'tv', 'attendance-tv', 'attendance', 'reports'].includes(item);
   };
 

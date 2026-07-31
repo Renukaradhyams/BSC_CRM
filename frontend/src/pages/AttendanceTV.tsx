@@ -73,6 +73,32 @@ export default function AttendanceTV() {
     return () => clearInterval(poll);
   }, [authenticated]);
 
+  // Filter records by selected floor/section
+  const filteredRecords = selectedFloor === 'ALL'
+    ? records
+    : records.filter(r => r.section.toLowerCase().includes(selectedFloor.toLowerCase()) || r.department.toLowerCase().includes(selectedFloor.toLowerCase()));
+
+  const presentList = filteredRecords.filter(r => r.status === 'present');
+  const absentList = filteredRecords.filter(r => r.status !== 'present');
+
+  useEffect(() => {
+    if (!authenticated || filteredRecords.length === 0) return;
+    const interval = setInterval(() => {
+      setPresentPage(p => {
+        const maxPage = Math.max(0, Math.ceil(presentList.length / ITEMS_PER_PAGE) - 1);
+        return p >= maxPage ? 0 : p + 1;
+      });
+      setAbsentPage(p => {
+        const maxPage = Math.max(0, Math.ceil(absentList.length / ITEMS_PER_PAGE) - 1);
+        return p >= maxPage ? 0 : p + 1;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [authenticated, presentList.length, absentList.length]);
+
+  const displayedPresent = presentList.slice(presentPage * ITEMS_PER_PAGE, (presentPage + 1) * ITEMS_PER_PAGE);
+  const displayedAbsent = absentList.slice(absentPage * ITEMS_PER_PAGE, (absentPage + 1) * ITEMS_PER_PAGE);
+
   // Unlock PIN Screen matching TVDisplay.tsx
   if (!authenticated) {
     return (
@@ -171,32 +197,6 @@ export default function AttendanceTV() {
       </div>
     );
   }
-
-  // Filter records by selected floor/section
-  const filteredRecords = selectedFloor === 'ALL'
-    ? records
-    : records.filter(r => r.section.toLowerCase().includes(selectedFloor.toLowerCase()) || r.department.toLowerCase().includes(selectedFloor.toLowerCase()));
-
-  const presentList = filteredRecords.filter(r => r.status === 'present');
-  const absentList = filteredRecords.filter(r => r.status !== 'present');
-
-  useEffect(() => {
-    if (!authenticated || filteredRecords.length === 0) return;
-    const interval = setInterval(() => {
-      setPresentPage(p => {
-        const maxPage = Math.max(0, Math.ceil(presentList.length / ITEMS_PER_PAGE) - 1);
-        return p >= maxPage ? 0 : p + 1;
-      });
-      setAbsentPage(p => {
-        const maxPage = Math.max(0, Math.ceil(absentList.length / ITEMS_PER_PAGE) - 1);
-        return p >= maxPage ? 0 : p + 1;
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [authenticated, presentList.length, absentList.length]);
-
-  const displayedPresent = presentList.slice(presentPage * ITEMS_PER_PAGE, (presentPage + 1) * ITEMS_PER_PAGE);
-  const displayedAbsent = absentList.slice(absentPage * ITEMS_PER_PAGE, (absentPage + 1) * ITEMS_PER_PAGE);
 
   const uniqueFloors = Array.from(new Set(records.map(r => r.section).filter(Boolean)));
 

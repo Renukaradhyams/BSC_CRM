@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface Employee {
   id: number;
@@ -58,8 +59,28 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 export default function Attendance() {
+  const { user } = useAuth();
   const today = new Date();
   const [activeTab, setActiveTab] = useState<'register' | 'employees' | 'supervisor'>('register');
+
+  useEffect(() => {
+    if (user?.role === 'supervisor') {
+      setActiveTab('supervisor');
+      const storedSup = localStorage.getItem('crm_supervisor');
+      if (storedSup) {
+        const supInfo = JSON.parse(storedSup);
+        setSupervisorInfo(supInfo);
+        
+        api.get(`/api/attendance/supervisor/team?sectionCode=${supInfo.sectionCode}&date=${inputToApi(new Date())}`)
+          .then(res => {
+            if (res.data?.ok) {
+              setSupervisorTeam(res.data.records || []);
+            }
+          })
+          .catch(err => console.error(err));
+      }
+    }
+  }, [user]);
 
   // Register State
   const [selectedDateInput, setSelectedDateInput] = useState<string>(formatDateInput(today));
@@ -576,28 +597,32 @@ export default function Attendance() {
         {/* Tab Navigation & Export */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', maxWidth: '100%' }}>
           <div className="scroll-tabs" style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '4px', gap: '2px' }}>
-            <button
-              onClick={() => setActiveTab('register')}
-              style={{
-                padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                background: activeTab === 'register' ? '#4F46E5' : 'transparent',
-                color: activeTab === 'register' ? '#FFFFFF' : '#64748B',
-                border: 'none', cursor: 'pointer'
-              }}
-            >
-              📋 Attendance Register
-            </button>
-            <button
-              onClick={() => setActiveTab('employees')}
-              style={{
-                padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                background: activeTab === 'employees' ? '#4F46E5' : 'transparent',
-                color: activeTab === 'employees' ? '#FFFFFF' : '#64748B',
-                border: 'none', cursor: 'pointer'
-              }}
-            >
-              👥 Employee Master
-            </button>
+            {user?.role !== 'supervisor' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('register')}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                    background: activeTab === 'register' ? '#4F46E5' : 'transparent',
+                    color: activeTab === 'register' ? '#FFFFFF' : '#64748B',
+                    border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  📋 Attendance Register
+                </button>
+                <button
+                  onClick={() => setActiveTab('employees')}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                    background: activeTab === 'employees' ? '#4F46E5' : 'transparent',
+                    color: activeTab === 'employees' ? '#FFFFFF' : '#64748B',
+                    border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  👥 Employee Master
+                </button>
+              </>
+            )}
             <button
               onClick={() => setActiveTab('supervisor')}
               style={{
@@ -607,7 +632,7 @@ export default function Attendance() {
                 border: 'none', cursor: 'pointer'
               }}
             >
-              🔐 Section Login
+              🔐 {user?.role === 'supervisor' ? 'My Team Roster' : 'Section Login'}
             </button>
           </div>
 

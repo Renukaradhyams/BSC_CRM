@@ -153,6 +153,9 @@ export default function Login() {
         if (settingsData) {
           localStorage.setItem('crm_settings', JSON.stringify(settingsData));
         }
+        if (res.data.supervisor) {
+          localStorage.setItem('crm_supervisor', JSON.stringify(res.data.supervisor));
+        }
         window.location.href = '/app/attendance';
       } else {
         setError(res.data?.error || 'Invalid Supervisor PIN');
