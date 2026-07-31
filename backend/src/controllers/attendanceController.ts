@@ -61,6 +61,51 @@ export const updateEmployee = async (req: AuthenticatedRequest, res: Response) =
   }
 };
 
+// 2d. Group Edit Employees (Assign Supervisor, Department, Section in bulk)
+export const groupEditEmployees = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { empIds, department, section, supervisorCode, updateDepartment, updateSection, updateSupervisorCode } = req.body;
+
+    if (!Array.isArray(empIds) || empIds.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Please select at least one employee for group edit.' });
+    }
+
+    if (!updateDepartment && !updateSection && !updateSupervisorCode) {
+      return res.status(400).json({ ok: false, error: 'No fields selected to update.' });
+    }
+
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (updateDepartment) {
+      updates.push('department = ?');
+      params.push(department || 'Sales');
+    }
+
+    if (updateSection) {
+      updates.push('section = ?');
+      params.push(section || 'Sarees Division');
+    }
+
+    if (updateSupervisorCode) {
+      updates.push('supervisorCode = ?');
+      params.push(supervisorCode || null);
+    }
+
+    const placeholders = empIds.map(() => '?').join(',');
+    params.push(...empIds);
+
+    const sql = `UPDATE Employee SET ${updates.join(', ')} WHERE id IN (${placeholders}) AND deleted_at IS NULL`;
+
+    await query(sql, params);
+
+    return res.json({ ok: true, count: empIds.length });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
+
 // 2b. Bulk Upload Employees (CSV Import)
 export const bulkUploadEmployees = async (req: AuthenticatedRequest, res: Response) => {
   try {

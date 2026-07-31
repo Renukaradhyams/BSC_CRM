@@ -10,6 +10,7 @@ interface Employee {
   designation: string;
   phone: string | null;
   isActive: boolean;
+  supervisorCode?: string | null;
 }
 
 interface AttendanceRecord {
@@ -111,6 +112,74 @@ export default function Attendance() {
   const [editPhone, setEditPhone] = useState<string>('');
   const [editSupervisorCode, setEditSupervisorCode] = useState<string>('');
   const [updatingEmp, setUpdatingEmp] = useState<boolean>(false);
+
+  // Group Edit State
+  const [selectedEmpIds, setSelectedEmpIds] = useState<number[]>([]);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState<boolean>(false);
+  const [groupDept, setGroupDept] = useState<string>('Sales');
+  const [groupSection, setGroupSection] = useState<string>('Sarees Division');
+  const [groupSupervisorCode, setGroupSupervisorCode] = useState<string>('');
+  const [groupUpdateDept, setGroupUpdateDept] = useState<boolean>(true);
+  const [groupUpdateSection, setGroupUpdateSection] = useState<boolean>(true);
+  const [groupUpdateSupervisor, setGroupUpdateSupervisor] = useState<boolean>(true);
+  const [updatingGroup, setUpdatingGroup] = useState<boolean>(false);
+
+  const toggleSelectEmp = (id: number) => {
+    setSelectedEmpIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllDisplayed = (displayedEmps: Employee[]) => {
+    const displayedIds = displayedEmps.map(e => e.id);
+    const allSelected = displayedIds.every(id => selectedEmpIds.includes(id));
+
+    if (allSelected) {
+      setSelectedEmpIds(prev => prev.filter(id => !displayedIds.includes(id)));
+    } else {
+      setSelectedEmpIds(prev => Array.from(new Set([...prev, ...displayedIds])));
+    }
+  };
+
+  const handleGroupEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedEmpIds.length === 0) return;
+
+    if (!groupUpdateDept && !groupUpdateSection && !groupUpdateSupervisor) {
+      setError('Please select at least one field to update (Department, Section, or Supervisor).');
+      return;
+    }
+
+    try {
+      setUpdatingGroup(true);
+      setError('');
+      setSuccess('');
+
+      const res = await api.put('/api/attendance/employees/group-edit', {
+        empIds: selectedEmpIds,
+        department: groupDept,
+        section: groupSection,
+        supervisorCode: groupSupervisorCode || null,
+        updateDepartment: groupUpdateDept,
+        updateSection: groupUpdateSection,
+        updateSupervisorCode: groupUpdateSupervisor
+      });
+
+      if (res.data?.ok) {
+        setSuccess(`Group Edit Success: Updated ${res.data.count || selectedEmpIds.length} employee(s).`);
+        setIsGroupModalOpen(false);
+        setSelectedEmpIds([]);
+        fetchEmployees();
+        fetchAttendance();
+      } else {
+        setError(res.data?.error || 'Failed to update employees in group.');
+      }
+    } catch {
+      setError('Error performing group edit.');
+    } finally {
+      setUpdatingGroup(false);
+    }
+  };
 
   const handleUpdateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -980,20 +1049,92 @@ export default function Attendance() {
           {/* Employee Directory List */}
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
-                👥 Active Employee Roster Directory
-              </h3>
-              <input
-                type="text"
-                placeholder="🔍 Search by Emp No or Name..."
-                value={employeeSearch}
-                onChange={(e) => setEmployeeSearch(e.target.value)}
-                style={{
-                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
-                  fontSize: '13px', color: '#0F172A', background: '#FAF7F2', width: '220px'
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  👥 Active Employee Roster Directory
+                </h3>
+                {selectedEmpIds.length > 0 && (
+                  <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE' }}>
+                    {selectedEmpIds.length} selected
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedEmpIds.length === 0) {
+                      setError('Please select employees using checkboxes to perform group edit.');
+                    } else {
+                      setIsGroupModalOpen(true);
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    background: selectedEmpIds.length > 0 ? 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)' : '#F1F5F9',
+                    color: selectedEmpIds.length > 0 ? '#FFFFFF' : '#64748B',
+                    border: selectedEmpIds.length > 0 ? 'none' : '1px solid #CBD5E1',
+                    cursor: 'pointer',
+                    boxShadow: selectedEmpIds.length > 0 ? '0 4px 12px rgba(79,70,229,0.3)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>⚙️ Group Edit</span>
+                  {selectedEmpIds.length > 0 && (
+                    <span style={{ background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                      {selectedEmpIds.length}
+                    </span>
+                  )}
+                </button>
+
+                <input
+                  type="text"
+                  placeholder="🔍 Search by Emp No or Name..."
+                  value={employeeSearch}
+                  onChange={(e) => setEmployeeSearch(e.target.value)}
+                  style={{
+                    padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                    fontSize: '13px', color: '#0F172A', background: '#FAF7F2', width: '220px'
+                  }}
+                />
+              </div>
             </div>
+
+            {selectedEmpIds.length > 0 && (
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: 'linear-gradient(90deg, #EEF2FF 0%, #E0E7FF 100%)',
+                padding: '10px 16px', borderRadius: '8px', border: '1px solid #C7D2FE',
+                marginBottom: '16px', fontSize: '13px', flexWrap: 'wrap', gap: '8px'
+              }}>
+                <div style={{ color: '#3730A3', fontWeight: 700 }}>
+                  ⚡ <strong>{selectedEmpIds.length}</strong> employee(s) selected for bulk changes.
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsGroupModalOpen(true)}
+                    style={{ padding: '6px 14px', borderRadius: '6px', background: '#4F46E5', color: '#FFF', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '12px' }}
+                  >
+                    ⚙️ Group Edit (Supervisor / Dept / Section)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmpIds([])}
+                    style={{ padding: '6px 12px', borderRadius: '6px', background: '#FFFFFF', color: '#475569', fontWeight: 700, border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '12px' }}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            )}
 
             {employees.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontSize: '13px' }}>
@@ -1004,6 +1145,27 @@ export default function Attendance() {
                 <table className="data-table">
                   <thead>
                     <tr>
+                      {(() => {
+                        const filtered = employees.filter(emp => {
+                          if (!employeeSearch.trim()) return true;
+                          const q = employeeSearch.toLowerCase();
+                          return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q) || emp.department.toLowerCase().includes(q) || emp.section.toLowerCase().includes(q);
+                        });
+                        const displayed = filtered.slice((employeePage - 1) * 10, employeePage * 10);
+                        const isAllSelected = displayed.length > 0 && displayed.every(emp => selectedEmpIds.includes(emp.id));
+
+                        return (
+                          <th style={{ width: '40px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isAllSelected}
+                              onChange={() => toggleSelectAllDisplayed(displayed)}
+                              title="Select / Deselect all visible employees on page"
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </th>
+                        );
+                      })()}
                       <th>Emp No</th>
                       <th>Name</th>
                       <th>Department / Section</th>
@@ -1020,61 +1182,71 @@ export default function Attendance() {
                         const q = employeeSearch.toLowerCase();
                         return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q) || emp.department.toLowerCase().includes(q) || emp.section.toLowerCase().includes(q);
                       });
-                      const totalPages = Math.ceil(filtered.length / 10) || 1;
                       const displayed = filtered.slice((employeePage - 1) * 10, employeePage * 10);
 
-                      return displayed.map(emp => (
-                        <tr key={emp.id}>
-                          <td className="mono" style={{ fontWeight: 800, color: '#4F46E5' }}>
-                            {emp.empNo}
-                          </td>
-                          <td style={{ fontWeight: 700, color: '#0F172A' }}>
-                            {emp.name}
-                          </td>
-                          <td style={{ fontSize: '12px' }}>
-                            <div>{emp.department}</div>
-                            <div style={{ fontSize: '11px', color: '#94A3B8' }}>{emp.section}</div>
-                          </td>
-                          <td className="mono" style={{ fontSize: '12px', fontWeight: 800, color: emp.supervisorCode ? '#D97706' : '#94A3B8' }}>
-                            {emp.supervisorCode || '— Direct'}
-                          </td>
-                          <td style={{ fontSize: '12px', fontWeight: 600 }}>{emp.designation}</td>
-                          <td className="mono" style={{ fontSize: '12px', color: '#64748B' }}>
-                            {emp.phone || '—'}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button
-                                onClick={() => {
-                                  setEditingEmp(emp);
-                                  setEditEmpNo(emp.empNo);
-                                  setEditName(emp.name);
-                                  setEditDept(emp.department);
-                                  setEditSection(emp.section);
-                                  setEditDesig(emp.designation);
-                                  setEditPhone(emp.phone || '');
-                                  setEditSupervisorCode(emp.supervisorCode || '');
-                                }}
-                                style={{
-                                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                                  background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', cursor: 'pointer'
-                                }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                                style={{
-                                  padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                                  background: '#FEE2E2', color: '#EF4444', border: '1px solid #FCA5A5', cursor: 'pointer'
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ));
+                      return displayed.map(emp => {
+                        const isSelected = selectedEmpIds.includes(emp.id);
+                        return (
+                          <tr key={emp.id} style={{ background: isSelected ? '#F5F3FF' : undefined }}>
+                            <td style={{ textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectEmp(emp.id)}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                              />
+                            </td>
+                            <td className="mono" style={{ fontWeight: 800, color: '#4F46E5' }}>
+                              {emp.empNo}
+                            </td>
+                            <td style={{ fontWeight: 700, color: '#0F172A' }}>
+                              {emp.name}
+                            </td>
+                            <td style={{ fontSize: '12px' }}>
+                              <div>{emp.department}</div>
+                              <div style={{ fontSize: '11px', color: '#94A3B8' }}>{emp.section}</div>
+                            </td>
+                            <td className="mono" style={{ fontSize: '12px', fontWeight: 800, color: emp.supervisorCode ? '#D97706' : '#94A3B8' }}>
+                              {emp.supervisorCode || '— Direct'}
+                            </td>
+                            <td style={{ fontSize: '12px', fontWeight: 600 }}>{emp.designation}</td>
+                            <td className="mono" style={{ fontSize: '12px', color: '#64748B' }}>
+                              {emp.phone || '—'}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  onClick={() => {
+                                    setEditingEmp(emp);
+                                    setEditEmpNo(emp.empNo);
+                                    setEditName(emp.name);
+                                    setEditDept(emp.department);
+                                    setEditSection(emp.section);
+                                    setEditDesig(emp.designation);
+                                    setEditPhone(emp.phone || '');
+                                    setEditSupervisorCode(emp.supervisorCode || '');
+                                  }}
+                                  style={{
+                                    padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                    background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', cursor: 'pointer'
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                                  style={{
+                                    padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                    background: '#FEE2E2', color: '#EF4444', border: '1px solid #FCA5A5', cursor: 'pointer'
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
                     })()}
                   </tbody>
                 </table>
@@ -1445,6 +1617,144 @@ export default function Attendance() {
                   style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#4F46E5', border: 'none', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {updatingEmp ? 'Saving...' : '💾 Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Group Edit Employee Modal */}
+      {isGroupModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(15, 23, 42, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div className="glass-card fade-in" style={{ width: '520px', maxWidth: '100%', padding: '24px', background: '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  👥 Group Edit Employees
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0 0' }}>
+                  Updating assignments for <strong>{selectedEmpIds.length}</strong> selected employee(s).
+                </p>
+              </div>
+              <button onClick={() => setIsGroupModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleGroupEditSubmit}>
+              <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '16px', fontSize: '12px', color: '#475569' }}>
+                💡 Check the fields you wish to update across all selected employees. Unchecked fields will remain unchanged.
+              </div>
+
+              {/* Department Assignment */}
+              <div style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '12px', background: groupUpdateDept ? '#FFFFFF' : '#F8FAFC' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#0F172A', marginBottom: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={groupUpdateDept}
+                    onChange={(e) => setGroupUpdateDept(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>Assign Department</span>
+                </label>
+                {groupUpdateDept && (
+                  <select
+                    value={groupDept}
+                    onChange={(e) => setGroupDept(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', background: '#FAF7F2' }}
+                  >
+                    <option value="Sales">Sales</option>
+                    <option value="Billing">Billing</option>
+                    <option value="Greeter & Helpdesk">Greeter & Helpdesk</option>
+                    <option value="Inventory / Stock">Inventory / Stock</option>
+                    <option value="Management">Management</option>
+                  </select>
+                )}
+              </div>
+
+              {/* Section / Floor Assignment */}
+              <div style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '12px', background: groupUpdateSection ? '#FFFFFF' : '#F8FAFC' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#0F172A', marginBottom: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={groupUpdateSection}
+                    onChange={(e) => setGroupUpdateSection(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>Assign Floor / Section</span>
+                </label>
+                {groupUpdateSection && (
+                  <select
+                    value={groupSection}
+                    onChange={(e) => setGroupSection(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', background: '#FAF7F2' }}
+                  >
+                    <option value="Sarees Division">Sarees Division</option>
+                    <option value="Mens Suitings & Wear">Mens Suitings & Wear</option>
+                    <option value="Kids and Toys Section">Kids and Toys Section</option>
+                    <option value="Cash Counter 1">Cash Counter 1</option>
+                    <option value="Cash Counter 2">Cash Counter 2</option>
+                    <option value="Ground Floor">Ground Floor</option>
+                    <option value="First Floor">First Floor</option>
+                    <option value="Second Floor">Second Floor</option>
+                  </select>
+                )}
+              </div>
+
+              {/* Section Supervisor Assignment */}
+              <div style={{ padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '16px', background: groupUpdateSupervisor ? '#FFFFFF' : '#F8FAFC' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px', color: '#0F172A', marginBottom: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={groupUpdateSupervisor}
+                    onChange={(e) => setGroupUpdateSupervisor(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <span>Assign Section Supervisor</span>
+                </label>
+                {groupUpdateSupervisor && (
+                  <select
+                    value={groupSupervisorCode}
+                    onChange={(e) => setGroupSupervisorCode(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', background: '#FAF7F2' }}
+                  >
+                    <option value="">-- Direct / Unassigned --</option>
+                    {supervisorsList.map(sup => (
+                      <option key={sup.id} value={sup.sectionCode}>
+                        {sup.name} ({sup.sectionCode} — {sup.sectionName || sup.floor})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsGroupModalOpen(false)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingGroup || (!groupUpdateDept && !groupUpdateSection && !groupUpdateSupervisor)}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px',
+                    background: (!groupUpdateDept && !groupUpdateSection && !groupUpdateSupervisor) ? '#94A3B8' : '#4F46E5',
+                    border: 'none', color: '#FFFFFF', fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  {updatingGroup ? 'Updating...' : `💾 Apply to ${selectedEmpIds.length} Employee(s)`}
                 </button>
               </div>
             </form>

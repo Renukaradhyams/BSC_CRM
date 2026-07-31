@@ -1,6 +1,6 @@
 import express from 'express';
 import { 
-  getEmployees, createEmployee, updateEmployee, bulkUploadEmployees, deleteEmployee, 
+  getEmployees, createEmployee, updateEmployee, groupEditEmployees, bulkUploadEmployees, deleteEmployee, 
   getAttendance, upsertAttendance,
   getSupervisors, createSupervisor, updateSupervisor, deleteSupervisor,
   supervisorLogin, getSupervisorTeam
@@ -12,6 +12,7 @@ const router = express.Router();
 // Employee Roster management
 router.get('/employees', authenticateJWT, getEmployees);
 router.post('/employees', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'crm_manager', 'hr']), createEmployee);
+router.put('/employees/group-edit', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'crm_manager', 'hr']), groupEditEmployees);
 router.put('/employees/:id', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'crm_manager', 'hr']), updateEmployee);
 router.post('/employees/bulk', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'crm_manager', 'hr']), bulkUploadEmployees);
 router.delete('/employees/:id', authenticateJWT, authorizeRoles(['super_admin', 'admin', 'crm_manager', 'hr']), deleteEmployee);
