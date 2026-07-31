@@ -329,7 +329,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Retail CRM
               </h2>
               <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                {settings?.companyName || 'BSC THE TEXTILE MALL'}
+                {settings?.companyName || 'BSC Exclusive Davangere'}
               </span>
             </div>
           )}

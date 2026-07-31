@@ -18,7 +18,7 @@ export async function initDb() {
     \`cashSettlementPin\` VARCHAR(50) DEFAULT '1234',
     \`vmChecklistPin\` VARCHAR(50) DEFAULT '5678',
     \`feedbackQ0Label\` VARCHAR(500) DEFAULT 'How was your shopping experience overall?',
-    \`feedbackQ1Label\` VARCHAR(500) DEFAULT 'Would you recommend BSC DAVANAGERE to friends & family?',
+    \`feedbackQ1Label\` VARCHAR(500) DEFAULT 'Would you recommend BSC Exclusive Davangere to friends & family?',
     \`feedbackQ2Label\` VARCHAR(500) DEFAULT 'How satisfied are you with our staff assistance & service?',
     \`feedbackQ3Label\` VARCHAR(500) DEFAULT 'Any additional comments or product requirements?',
     \`allowSelfRegister\` BOOLEAN DEFAULT TRUE,
@@ -35,7 +35,7 @@ export async function initDb() {
   try { await query("ALTER TABLE `Settings` ADD COLUMN `cashSettlementPin` VARCHAR(50) DEFAULT '1234'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `vmChecklistPin` VARCHAR(50) DEFAULT '5678'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ0Label` VARCHAR(500) DEFAULT 'How was your shopping experience overall?'"); } catch (_) {}
-  try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ1Label` VARCHAR(500) DEFAULT 'Would you recommend BSC DAVANAGERE to friends & family?'"); } catch (_) {}
+  try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ1Label` VARCHAR(500) DEFAULT 'Would you recommend BSC Exclusive Davangere to friends & family?'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ2Label` VARCHAR(500) DEFAULT 'How satisfied are you with our staff assistance & service?'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `feedbackQ3Label` VARCHAR(500) DEFAULT 'Any additional comments or product requirements?'"); } catch (_) {}
   try { await query("ALTER TABLE `Settings` ADD COLUMN `allowSelfRegister` BOOLEAN DEFAULT TRUE"); } catch (_) {}
@@ -435,7 +435,7 @@ async function seedIfEmpty() {
         footfallGraceMin, footfallEditCutoff, derEmail, derWhatsappNote, setupComplete)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)`,
     [
-      'BSC Textiles DAVANAGERE',
+      'BSC Exclusive Davangere',
       'https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg',
       '10:00', '22:00', 30, '10:30',
       'manager@bsctextiles.com',

@@ -77,7 +77,7 @@ export default function CashLogin({ onAuthenticated }: CashLoginProps) {
           Cash Settlement Portal
         </h2>
         <p style={{ color: '#64748B', fontSize: '13px', marginBottom: '24px' }}>
-          BSC DAVANAGERE · Enter Cashier 4-Digit PIN
+          BSC Exclusive Davangere · Enter Cashier 4-Digit PIN
         </p>
 
         {/* PIN dots status display */}

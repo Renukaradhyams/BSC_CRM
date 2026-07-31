@@ -272,7 +272,7 @@ export const updateSettings = async (req: AuthenticatedRequest, res: Response) =
     const cashPinVal = cashSettlementPin || '1234';
     const vmPinVal = vmChecklistPin || '5678';
     const q0Val = feedbackQ0Label || 'How was your shopping experience overall?';
-    const q1Val = feedbackQ1Label || 'Would you recommend BSC DAVANAGERE to friends & family?';
+    const q1Val = feedbackQ1Label || 'Would you recommend BSC Exclusive Davangere to friends & family?';
     const q2Val = feedbackQ2Label || 'How satisfied are you with our staff assistance & service?';
     const q3Val = feedbackQ3Label || 'Any additional comments or product requirements?';
     const allowSelfVal = allowSelfRegister !== undefined ? Boolean(allowSelfRegister) : true;

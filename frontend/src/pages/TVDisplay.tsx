@@ -217,7 +217,7 @@ export default function TVDisplay() {
       }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 'bold', fontFamily: "'DM Serif Display', serif", color: 'var(--gold-l)', letterSpacing: '0.02em' }}>
-            BSC TEXTILES DAVANAGERE
+            BSC Exclusive Davangere
           </h1>
           <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Live Performance Pulse Board

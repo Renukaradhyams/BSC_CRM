@@ -204,7 +204,7 @@ export default function Login() {
                 style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'contain', background: '#FFFFFF' }}
               />
               <span className="outfit" style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF' }}>
-                {settings?.companyName || 'BSC THE TEXTILE MALL'}
+                {settings?.companyName || 'BSC Exclusive Davangere'}
               </span>
             </div>
 
@@ -232,8 +232,8 @@ export default function Login() {
               </div>
             </div>
 
-            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '20px' }}>
-              © {new Date().getFullYear()} BSC Textiles DAVANAGERE. All rights reserved.
+            <div style={{ textAlign: 'center', marginTop: '32px', fontSize: '13px', color: '#94A3B8' }}>
+              © {new Date().getFullYear()} BSC Exclusive Davangere. All rights reserved.
             </div>
           </div>
         </div>

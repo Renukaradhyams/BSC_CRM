@@ -245,7 +245,7 @@ export default function AttendanceTV() {
               Floor Live Attendance Scoreboard
             </h1>
             <div style={{ fontSize: '13px', color: '#94A3B8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>BSC THE TEXTILE MALL</span>
+              <span>BSC Exclusive Davangere</span>
               <span>·</span>
               <span style={{ color: '#10B981', fontWeight: 700 }}>● LIVE STORE POLLING</span>
             </div>
