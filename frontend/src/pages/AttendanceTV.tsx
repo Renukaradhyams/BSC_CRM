@@ -26,7 +26,7 @@ export default function AttendanceTV() {
   const [presentPage, setPresentPage] = useState<number>(0);
   const [absentPage, setAbsentPage] = useState<number>(0);
 
-  const ITEMS_PER_PAGE = 30;
+  const ITEMS_PER_PAGE = 18;
 
   // Clock
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function AttendanceTV() {
         const maxPage = Math.max(0, Math.ceil(absentList.length / ITEMS_PER_PAGE) - 1);
         return p >= maxPage ? 0 : p + 1;
       });
-    }, 5000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [authenticated, presentList.length, absentList.length]);
 
