@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { query } from '../config/db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { formatDateString } from './crmController';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_bsc_crm';
 
 // 1. Get Employee Roster
 export const getEmployees = async (req: Request, res: Response) => {
@@ -310,8 +313,30 @@ export const supervisorLogin = async (req: Request, res: Response) => {
       return res.status(401).json({ ok: false, error: 'Invalid PIN. Please check with your manager.' });
     }
 
+    const token = jwt.sign(
+      { id: supervisor.id, email: `supervisor_${supervisor.sectionCode}@bsc.com`, role: 'supervisor' },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    const [settings] = await query('SELECT * FROM Settings WHERE deleted_at IS NULL LIMIT 1');
+
     return res.json({ 
-      ok: true, 
+      ok: true,
+      token,
+      user: {
+        name: supervisor.name,
+        role: 'supervisor',
+        sectionsAssigned: supervisor.sectionName
+      },
+      settings: settings ? {
+        companyName: settings.companyName,
+        companyLogoUrl: settings.companyLogoUrl,
+        operatingStart: settings.operatingStart,
+        operatingEnd: settings.operatingEnd,
+        graceMin: settings.footfallGraceMin,
+        editCutoff: settings.footfallEditCutoff
+      } : null,
       supervisor: {
         id: supervisor.id,
         name: supervisor.name,
@@ -336,6 +361,12 @@ export const getSupervisorTeam = async (req: Request, res: Response) => {
 
     const dateStr = date || formatDateString(new Date());
 
+    const supervisorResult = await query(
+      'SELECT sectionName FROM SectionSupervisor WHERE sectionCode = ? AND deleted_at IS NULL LIMIT 1',
+      [sectionCode]
+    );
+    const sectionName = supervisorResult[0]?.sectionName || '';
+
     const records = await query(
       `SELECT 
         e.id as empId,
@@ -355,9 +386,9 @@ export const getSupervisorTeam = async (req: Request, res: Response) => {
         a.remarks
        FROM Employee e
        LEFT JOIN Attendance a ON e.id = a.empId AND a.date = ? AND a.deleted_at IS NULL
-       WHERE e.deleted_at IS NULL AND e.isActive = TRUE AND e.supervisorCode = ?
+       WHERE e.deleted_at IS NULL AND e.isActive = TRUE AND (e.supervisorCode = ? OR e.section = ?)
        ORDER BY e.empNo ASC`,
-      [dateStr, dateStr, sectionCode]
+      [dateStr, dateStr, sectionCode, sectionName]
     );
 
     return res.json({ ok: true, date: dateStr, sectionCode, records });

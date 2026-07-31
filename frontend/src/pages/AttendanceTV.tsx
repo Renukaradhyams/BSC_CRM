@@ -23,6 +23,11 @@ export default function AttendanceTV() {
   const [loading, setLoading] = useState<boolean>(true);
   const [timeStr, setTimeStr] = useState<string>('');
 
+  const [presentPage, setPresentPage] = useState<number>(0);
+  const [absentPage, setAbsentPage] = useState<number>(0);
+
+  const ITEMS_PER_PAGE = 12;
+
   // Clock
   useEffect(() => {
     if (!authenticated) return;
@@ -175,6 +180,24 @@ export default function AttendanceTV() {
   const presentList = filteredRecords.filter(r => r.status === 'present');
   const absentList = filteredRecords.filter(r => r.status !== 'present');
 
+  useEffect(() => {
+    if (!authenticated || filteredRecords.length === 0) return;
+    const interval = setInterval(() => {
+      setPresentPage(p => {
+        const maxPage = Math.max(0, Math.ceil(presentList.length / ITEMS_PER_PAGE) - 1);
+        return p >= maxPage ? 0 : p + 1;
+      });
+      setAbsentPage(p => {
+        const maxPage = Math.max(0, Math.ceil(absentList.length / ITEMS_PER_PAGE) - 1);
+        return p >= maxPage ? 0 : p + 1;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [authenticated, presentList.length, absentList.length]);
+
+  const displayedPresent = presentList.slice(presentPage * ITEMS_PER_PAGE, (presentPage + 1) * ITEMS_PER_PAGE);
+  const displayedAbsent = absentList.slice(absentPage * ITEMS_PER_PAGE, (absentPage + 1) * ITEMS_PER_PAGE);
+
   const uniqueFloors = Array.from(new Set(records.map(r => r.section).filter(Boolean)));
 
   return (
@@ -291,9 +314,9 @@ export default function AttendanceTV() {
               </span>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px', alignContent: 'start' }}>
-              {presentList.length > 0 ? (
-                presentList.map(r => (
+            <div style={{ flex: 1, overflowY: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px', alignContent: 'start' }}>
+              {displayedPresent.length > 0 ? (
+                displayedPresent.map(r => (
                   <div
                     key={r.empId}
                     style={{
@@ -369,9 +392,9 @@ export default function AttendanceTV() {
               </span>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px', alignContent: 'start' }}>
-              {absentList.length > 0 ? (
-                absentList.map(r => {
+            <div style={{ flex: 1, overflowY: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '12px', alignContent: 'start' }}>
+              {displayedAbsent.length > 0 ? (
+                displayedAbsent.map(r => {
                   const statusColors: Record<string, { bg: string; color: string; label: string }> = {
                     absent:   { bg: '#991B1B', color: '#FCA5A5', label: 'ABSENT' },
                     late:     { bg: '#92400E', color: '#FCD34D', label: 'LATE' },

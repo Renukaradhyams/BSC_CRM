@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
-type LoginRole = 'admin' | 'crm' | 'greeter' | 'telecaller';
+type LoginRole = 'admin' | 'crm' | 'greeter' | 'supervisor';
 
 interface GreeterOption {
   id: number;
@@ -21,10 +21,12 @@ export default function Login() {
   const [error, setError] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Greeter PIN login states
   const [greeterList, setGreeterList] = useState<GreeterOption[]>([]);
   const [selectedGreeterName, setSelectedGreeterName] = useState<string>('');
   const [greeterPin, setGreeterPin] = useState<string>('');
+  
+  // Supervisor PIN login state
+  const [supervisorPin, setSupervisorPin] = useState<string>('');
 
   useEffect(() => {
     fetchGreeters();
@@ -110,8 +112,55 @@ export default function Login() {
         setGreeterPin('');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Greeter PIN login failed.');
+      setError(err.response?.data?.error || 'Failed to login');
       setGreeterPin('');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSupervisorPinInput = (num: string) => {
+    if (supervisorPin.length < 4) {
+      const newPin = supervisorPin + num;
+      setSupervisorPin(newPin);
+      if (newPin.length === 4) {
+        handleSupervisorSubmit(undefined, newPin);
+      }
+    }
+  };
+
+  const handleSupervisorPinBackspace = () => {
+    setSupervisorPin(prev => prev.slice(0, -1));
+  };
+
+  const handleSupervisorSubmit = async (e?: React.FormEvent, pinToSubmit?: string) => {
+    if (e) e.preventDefault();
+    const finalPin = pinToSubmit || supervisorPin;
+    if (finalPin.length !== 4) {
+      setError('Please enter your 4-digit PIN.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const res = await api.post('/api/attendance/supervisor/login', { pin: finalPin });
+      if (res.data && res.data.ok) {
+        const { token, user: userData, settings: settingsData } = res.data;
+        localStorage.setItem('crm_token', token);
+        localStorage.setItem('crm_user', JSON.stringify(userData));
+        if (settingsData) {
+          localStorage.setItem('crm_settings', JSON.stringify(settingsData));
+        }
+        window.location.href = '/app/attendance';
+      } else {
+        setError(res.data?.error || 'Invalid Supervisor PIN');
+        setSupervisorPin('');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to login');
+      setSupervisorPin('');
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +252,7 @@ export default function Login() {
               { id: 'admin', label: '🛡️ Manager / Admin' },
               { id: 'crm', label: '📊 CRM Staff' },
               { id: 'greeter', label: '🚶 Greeter PIN' },
-              { id: 'telecaller', label: '📞 Telecaller' }
+              { id: 'supervisor', label: '🔐 Supervisor' }
             ].map(role => (
               <button
                 key={role.id}
@@ -212,7 +261,7 @@ export default function Login() {
                   setError('');
                   if (role.id === 'admin') setUsername('admin@store.com');
                   else if (role.id === 'crm') setUsername('crm@store.com');
-                  else if (role.id === 'telecaller') setUsername('telecaller@store.com');
+                  else setUsername('');
                 }}
                 style={{
                   padding: '9px 12px',
@@ -234,7 +283,7 @@ export default function Login() {
           {error && <div className="alert alert-error">{error}</div>}
 
           {/* STANDARD PASSWORD LOGIN FORM */}
-          {selectedRole !== 'greeter' ? (
+          {(selectedRole === 'admin' || selectedRole === 'crm') ? (
             <form onSubmit={handleSubmitStandard}>
               <div className="field">
                 <label>Email Address / Username</label>
@@ -276,7 +325,7 @@ export default function Login() {
                 {submitting ? 'Authenticating...' : 'Sign In →'}
               </button>
             </form>
-          ) : (
+          ) : selectedRole === 'greeter' ? (
             /* GREETER TABLET PIN LOGIN FORM */
             <div>
               <div className="field">
@@ -413,6 +462,130 @@ export default function Login() {
                 style={{ background: '#D97706', borderColor: '#D97706' }}
               >
                 {submitting ? 'Verifying PIN...' : 'Login as Greeter →'}
+              </button>
+            </div>
+          ) : (
+            /* SUPERVISOR PIN LOGIN FORM */
+            <div>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <p style={{ fontSize: '14px', color: '#64748B' }}>Enter your 4-digit Section PIN</p>
+              </div>
+
+              {/* Visual PIN Dots Display */}
+              <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '14px' }}>
+                  {[0, 1, 2, 3].map(i => (
+                    <div
+                      key={i}
+                      style={{
+                        width: '42px',
+                        height: '48px',
+                        borderRadius: '10px',
+                        border: '2px solid #CBD5E1',
+                        background: i < supervisorPin.length ? '#1E293B' : '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px',
+                        fontWeight: 800,
+                        color: '#FFFFFF',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {i < supervisorPin.length ? '●' : ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Circular Keypad for Touch Tablets */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '12px',
+                  maxWidth: '280px',
+                  margin: '0 auto 16px auto'
+                }}
+              >
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => handleSupervisorPinInput(num)}
+                    style={{
+                      height: '52px',
+                      borderRadius: '12px',
+                      background: '#FAF7F2',
+                      border: '1px solid #EAE5DC',
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      color: '#0F172A',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSupervisorPin('')}
+                  style={{
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: '#FEE2E2',
+                    border: '1px solid #FCA5A5',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#EF4444',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSupervisorPinInput('0')}
+                  style={{
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: '#FAF7F2',
+                    border: '1px solid #EAE5DC',
+                    fontSize: '18px',
+                    fontWeight: 800,
+                    color: '#0F172A',
+                    cursor: 'pointer'
+                  }}
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSupervisorPinBackspace}
+                  style={{
+                    height: '52px',
+                    borderRadius: '12px',
+                    background: '#F1F5F9',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⌫
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleSupervisorSubmit()}
+                disabled={supervisorPin.length !== 4 || submitting}
+                className="btn btn-primary btn-full btn-lg"
+                style={{ background: '#1E293B', borderColor: '#1E293B' }}
+              >
+                {submitting ? 'Verifying PIN...' : 'Login as Supervisor →'}
               </button>
             </div>
           )}
