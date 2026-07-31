@@ -215,14 +215,14 @@ export default function VmDashboard({ userName, userRole, onNavigateToForm, onNa
             </div>
             <div style={{
               fontSize: '32px', fontWeight: 900, marginTop: '6px', lineHeight: 1,
-              color: submissions.length > 0 ? getScoreColor(submissions.reduce((a, s) => a + Number(s.score), 0) / submissions.length) : 'rgba(255,255,255,0.3)'
+              color: submissions.length > 0 ? getScoreColor((submissions.reduce((a, s) => a + Number(s.score), 0) / submissions.length) * 20) : 'rgba(255,255,255,0.3)'
             }}>
               {loading || submissions.length === 0
                 ? '—'
-                : `${Math.round(submissions.reduce((a, s) => a + Number(s.score), 0) / submissions.length)}%`}
+                : `${Math.round((submissions.reduce((a, s) => a + Number(s.score), 0) / submissions.length) * 20)}%`}
             </div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
-              {submissions.length > 0 ? getScoreLabel(submissions.reduce((a, s) => a + Number(s.score), 0) / submissions.length) : 'No data yet'}
+              {submissions.length > 0 ? getScoreLabel((submissions.reduce((a, s) => a + Number(s.score), 0) / submissions.length) * 20) : 'No data yet'}
             </div>
           </div>
 
@@ -289,8 +289,8 @@ export default function VmDashboard({ userName, userRole, onNavigateToForm, onNa
               {overallSubmission ? (
                 <>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '22px', fontWeight: 900, color: getScoreColor(overallSubmission.score) }}>
-                      {Math.round(overallSubmission.score)}%
+                    <div style={{ fontSize: '22px', fontWeight: 900, color: getScoreColor(overallSubmission.score * 20) }}>
+                      {Math.round(overallSubmission.score * 20)}%
                     </div>
                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
                       {overallSubmission.submittedAt
@@ -368,8 +368,8 @@ export default function VmDashboard({ userName, userRole, onNavigateToForm, onNa
 
                   {sub ? (
                     <>
-                      <div style={{ fontSize: '22px', fontWeight: 900, color: getScoreColor(sub.score), lineHeight: 1, marginBottom: '4px' }}>
-                        {Math.round(sub.score)}%
+                      <div style={{ fontSize: '22px', fontWeight: 900, color: getScoreColor(sub.score * 20), lineHeight: 1, marginBottom: '4px' }}>
+                        {Math.round(sub.score * 20)}%
                       </div>
                       <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
                         {sub.submittedAt
