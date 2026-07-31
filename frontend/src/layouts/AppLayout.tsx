@@ -94,12 +94,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
       const res = await api.get('/api/notifications');
       if (res.data?.ok) {
         const fetched: NotificationItem[] = res.data.notifications || [];
-        const unreadCount = fetched.filter(n => !n.isRead).length;
-
-        if (unreadCount > prevUnreadCountRef.current) {
+        
+        const latestId = fetched.length > 0 ? Math.max(...fetched.map(n => n.id)) : 0;
+        
+        if (prevUnreadCountRef.current !== 0 && latestId > prevUnreadCountRef.current) {
           playNotificationSound();
         }
-        prevUnreadCountRef.current = unreadCount;
+        
+        if (latestId > 0) {
+            prevUnreadCountRef.current = latestId;
+        } else if (prevUnreadCountRef.current === 0) {
+            // First load initialization
+            prevUnreadCountRef.current = latestId || -1; 
+        }
+        
         setNotifications(fetched);
       }
     } catch {

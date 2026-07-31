@@ -25,23 +25,45 @@ export const authenticateJWT = async (req: AuthenticatedRequest, res: Response, 
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: number; email: string; role: string };
-    const [user] = await query(
-      'SELECT * FROM User WHERE id = ? AND deleted_at IS NULL LIMIT 1',
-      [decoded.id]
-    );
+    
+    let userRecord;
+    if (decoded.role === 'supervisor') {
+      const [supervisor] = await query(
+        'SELECT * FROM SectionSupervisor WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+        [decoded.id]
+      );
+      if (supervisor && supervisor.isActive) {
+        userRecord = {
+          id: supervisor.id,
+          name: supervisor.name,
+          email: decoded.email,
+          role: 'supervisor',
+          sectionsAssigned: supervisor.sectionName,
+          isActive: supervisor.isActive
+        };
+      }
+    } else {
+      const [dbUser] = await query(
+        'SELECT * FROM User WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+        [decoded.id]
+      );
+      if (dbUser && dbUser.isActive) {
+        userRecord = {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          role: dbUser.role,
+          sectionsAssigned: dbUser.sectionsAssigned,
+          isActive: dbUser.isActive
+        };
+      }
+    }
 
-    if (!user || !user.isActive) {
+    if (!userRecord || !userRecord.isActive) {
       return res.status(403).json({ ok: false, error: 'User is inactive or deleted' });
     }
 
-    req.user = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      sectionsAssigned: user.sectionsAssigned,
-      isActive: user.isActive
-    };
+    req.user = userRecord;
     next();
   } catch (err) {
     return res.status(403).json({ ok: false, error: 'Invalid or expired token' });
