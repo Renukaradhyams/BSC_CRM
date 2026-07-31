@@ -140,7 +140,7 @@ export default function FeedbackList() {
   };
 
   return (
-    <div style={{ padding: '24px 32px', width: '100%' }} className="fade-in">
+    <div className="page-container fade-in">
       {/* Top Page Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -152,8 +152,8 @@ export default function FeedbackList() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', maxWidth: '100%' }}>
+          <div className="scroll-tabs" style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '4px' }}>
             <button
               onClick={() => setActiveTab('all')}
               style={{

@@ -58,7 +58,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function Attendance() {
   const today = new Date();
-  const [activeTab, setActiveTab] = useState<'register' | 'employees'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'employees' | 'supervisor'>('register');
 
   // Register State
   const [selectedDateInput, setSelectedDateInput] = useState<string>(formatDateInput(today));
@@ -68,6 +68,18 @@ export default function Attendance() {
   const [savingEmpId, setSavingEmpId] = useState<number | null>(null);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+
+  // Search State (for both tabs)
+  const [registerSearch, setRegisterSearch] = useState<string>('');
+  const [employeeSearch, setEmployeeSearch] = useState<string>('');
+
+  // Supervisor Login State
+  const [supervisorPin, setSupervisorPin] = useState<string>('');
+  const [supervisorInfo, setSupervisorInfo] = useState<any>(null);
+  const [supervisorTeam, setSupervisorTeam] = useState<AttendanceRecord[]>([]);
+  const [supervisorLoading, setSupervisorLoading] = useState<boolean>(false);
+  const [supervisorError, setSupervisorError] = useState<string>('');
+  const [savingSupEmpId, setSavingSupEmpId] = useState<number | null>(null);
 
   // Employee Form & Bulk State
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -162,10 +174,14 @@ export default function Attendance() {
     }
   }, [activeTab, fetchEmployees]);
 
-  // Filtered records by floor/section
-  const filteredRecords = selectedSectionFilter === 'ALL'
-    ? records
-    : records.filter(r => r.section.toLowerCase().includes(selectedSectionFilter.toLowerCase()) || r.department.toLowerCase().includes(selectedSectionFilter.toLowerCase()));
+  // Filtered records by floor/section AND search
+  const filteredRecords = records
+    .filter(r => selectedSectionFilter === 'ALL' || r.section.toLowerCase().includes(selectedSectionFilter.toLowerCase()) || r.department.toLowerCase().includes(selectedSectionFilter.toLowerCase()))
+    .filter(r => {
+      if (!registerSearch.trim()) return true;
+      const q = registerSearch.toLowerCase();
+      return r.empNo.toLowerCase().includes(q) || r.userName.toLowerCase().includes(q);
+    });
 
   // Calculate stats
   const stats = {
@@ -376,8 +392,63 @@ export default function Attendance() {
     URL.revokeObjectURL(url);
   };
 
+  const handleSupervisorLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSupervisorError('');
+    setSupervisorLoading(true);
+    try {
+      const res = await api.post('/api/attendance/supervisor/login', { pin: supervisorPin });
+      if (res.data?.ok) {
+        setSupervisorInfo(res.data.supervisor);
+        // Load team attendance
+        const teamRes = await api.get(`/api/attendance/supervisor/team?sectionCode=${res.data.supervisor.sectionCode}&date=${inputToApi(new Date())}`);
+        if (teamRes.data?.ok) {
+          setSupervisorTeam(teamRes.data.records || []);
+        }
+      }
+    } catch (err: any) {
+      setSupervisorError(err.response?.data?.error || 'Invalid PIN.');
+    } finally {
+      setSupervisorLoading(false);
+    }
+  };
+
+  const handleSaveSupRow = async (record: AttendanceRecord) => {
+    try {
+      setSavingSupEmpId(record.empId);
+      const apiDate = inputToApi(new Date());
+      let workedMin = 0;
+      if (record.checkIn && record.checkOut) {
+        const [inH, inM] = record.checkIn.split(':').map(Number);
+        const [outH, outM] = record.checkOut.split(':').map(Number);
+        workedMin = Math.max(0, (outH * 60 + outM) - (inH * 60 + inM));
+      }
+      await api.post('/api/attendance/upsert', {
+        empId: record.empId,
+        date: apiDate,
+        status: record.status,
+        checkIn: record.checkIn || null,
+        checkOut: record.checkOut || null,
+        workedMinutes: workedMin,
+        remarks: record.remarks || null,
+        markedByName: supervisorInfo?.name || 'Section Supervisor'
+      });
+      setSuccess(`Saved attendance for ${record.userName}.`);
+      setSupervisorTeam(prev => prev.map(r => r.empId === record.empId ? { ...r } : r));
+    } catch {
+      setError('Failed to save attendance.');
+    } finally {
+      setSavingSupEmpId(null);
+    }
+  };
+
+  const handleSupRowChange = (empId: number, field: string, val: any) => {
+    setSupervisorTeam(prev => prev.map(r => r.empId === empId ? { ...r, [field]: val } : r));
+  };
+
+
   return (
-    <div style={{ padding: '24px 32px', maxWidth: '1440px', margin: '0 auto' }} className="fade-in">
+    <div className="page-container fade-in">
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -390,19 +461,15 @@ export default function Attendance() {
         </div>
 
         {/* Tab Navigation & Export */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', maxWidth: '100%' }}>
+          <div className="scroll-tabs" style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '4px', gap: '2px' }}>
             <button
               onClick={() => setActiveTab('register')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 700,
+                padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
                 background: activeTab === 'register' ? '#4F46E5' : 'transparent',
                 color: activeTab === 'register' ? '#FFFFFF' : '#64748B',
-                border: 'none',
-                cursor: 'pointer'
+                border: 'none', cursor: 'pointer'
               }}
             >
               📋 Attendance Register
@@ -410,17 +477,24 @@ export default function Attendance() {
             <button
               onClick={() => setActiveTab('employees')}
               style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 700,
+                padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
                 background: activeTab === 'employees' ? '#4F46E5' : 'transparent',
                 color: activeTab === 'employees' ? '#FFFFFF' : '#64748B',
-                border: 'none',
-                cursor: 'pointer'
+                border: 'none', cursor: 'pointer'
               }}
             >
-              👥 Employee Master ({employees.length || 'Roster'})
+              👥 Employee Master
+            </button>
+            <button
+              onClick={() => setActiveTab('supervisor')}
+              style={{
+                padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                background: activeTab === 'supervisor' ? '#D97706' : 'transparent',
+                color: activeTab === 'supervisor' ? '#FFFFFF' : '#64748B',
+                border: 'none', cursor: 'pointer'
+              }}
+            >
+              🔐 Section Login
             </button>
           </div>
 
@@ -429,18 +503,9 @@ export default function Attendance() {
               onClick={handleExportCSV}
               disabled={records.length === 0}
               style={{
-                padding: '9px 18px',
-                borderRadius: '10px',
-                fontSize: '12px',
-                fontWeight: 700,
-                background: '#10B981',
-                color: '#FFFFFF',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(16,185,129,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
+                padding: '9px 18px', borderRadius: '10px', fontSize: '12px', fontWeight: 700,
+                background: '#10B981', color: '#FFFFFF', border: 'none', cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', gap: '6px'
               }}
             >
               📥 Export CSV
@@ -507,31 +572,20 @@ export default function Attendance() {
                   value={selectedDateInput}
                   onChange={(e) => setSelectedDateInput(e.target.value)}
                   style={{
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#0F172A',
-                    background: '#FAF7F2'
+                    padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                    fontSize: '13px', fontWeight: 600, color: '#0F172A', background: '#FAF7F2'
                   }}
                 />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>🏢 Floor / Section:</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>🏢 Floor:</span>
                 <select
                   value={selectedSectionFilter}
                   onChange={(e) => setSelectedSectionFilter(e.target.value)}
                   style={{
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: '#4F46E5',
-                    background: '#FAF7F2',
-                    cursor: 'pointer'
+                    padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                    fontSize: '13px', fontWeight: 700, color: '#4F46E5', background: '#FAF7F2', cursor: 'pointer'
                   }}
                 >
                   <option value="ALL">All Store Floors & Sections</option>
@@ -543,6 +597,20 @@ export default function Attendance() {
                   <option value="First Floor">First Floor</option>
                   <option value="Second Floor">Second Floor</option>
                 </select>
+              </div>
+
+              {/* Search by Emp No or Name */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Search by Emp No or Name..."
+                  value={registerSearch}
+                  onChange={(e) => setRegisterSearch(e.target.value)}
+                  style={{
+                    padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                    fontSize: '13px', color: '#0F172A', background: '#FAF7F2', width: '220px'
+                  }}
+                />
               </div>
             </div>
 
@@ -823,9 +891,21 @@ export default function Attendance() {
 
           {/* Employee Directory List */}
           <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
-              👥 Active Employee Roster Directory
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                👥 Active Employee Roster Directory
+              </h3>
+              <input
+                type="text"
+                placeholder="🔍 Search by Emp No or Name..."
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                style={{
+                  padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                  fontSize: '13px', color: '#0F172A', background: '#FAF7F2', width: '220px'
+                }}
+              />
+            </div>
 
             {employees.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontSize: '13px' }}>
@@ -846,7 +926,13 @@ export default function Attendance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {employees.map(emp => (
+                    {employees
+                      .filter(emp => {
+                        if (!employeeSearch.trim()) return true;
+                        const q = employeeSearch.toLowerCase();
+                        return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q);
+                      })
+                      .map(emp => (
                       <tr key={emp.id}>
                         <td className="mono" style={{ fontWeight: 800, color: '#4F46E5' }}>
                           {emp.empNo}
@@ -909,6 +995,229 @@ export default function Attendance() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TAB 3: SECTION SUPERVISOR LOGIN & ATTENDANCE */}
+      {activeTab === 'supervisor' && (
+        <div className="fade-in">
+          {!supervisorInfo ? (
+            // Supervisor PIN Login Screen
+            <div style={{ maxWidth: '420px', margin: '40px auto' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+                borderRadius: '20px',
+                padding: '36px 40px',
+                textAlign: 'center',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
+              }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #D97706, #F59E0B)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '28px', margin: '0 auto 16px auto',
+                  boxShadow: '0 8px 20px rgba(217,119,6,0.4)'
+                }}>🔐</div>
+                <h2 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '6px' }}>
+                  Section Supervisor Login
+                </h2>
+                <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '28px' }}>
+                  Enter your 4-digit section PIN to access your team’s attendance sheet
+                </p>
+
+                {supervisorError && (
+                  <div style={{
+                    background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '10px', padding: '10px 16px', marginBottom: '16px',
+                    color: '#F87171', fontSize: '13px', fontWeight: 700
+                  }}>
+                    {supervisorError}
+                  </div>
+                )}
+
+                <form onSubmit={handleSupervisorLogin}>
+                  {/* PIN dots display */}
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '20px' }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} style={{
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: i < supervisorPin.length ? '#F59E0B' : 'rgba(255,255,255,0.15)',
+                        border: '2px solid rgba(255,255,255,0.2)',
+                        transition: 'all 0.15s ease'
+                      }} />
+                    ))}
+                  </div>
+
+                  {/* Numeric PIN Pad */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                    {['1','2','3','4','5','6','7','8','9'].map(num => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => supervisorPin.length < 4 && setSupervisorPin(p => p + num)}
+                        style={{
+                          height: '56px', borderRadius: '12px',
+                          background: 'rgba(255,255,255,0.08)', color: '#FFFFFF',
+                          fontSize: '20px', fontWeight: 800, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer'
+                        }}
+                      >{num}</button>
+                    ))}
+                    <div />
+                    <button
+                      type="button"
+                      onClick={() => supervisorPin.length < 4 && setSupervisorPin(p => p + '0')}
+                      style={{
+                        height: '56px', borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.08)', color: '#FFFFFF',
+                        fontSize: '20px', fontWeight: 800, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer'
+                      }}
+                    >0</button>
+                    <button
+                      type="button"
+                      onClick={() => setSupervisorPin(p => p.slice(0, -1))}
+                      style={{
+                        height: '56px', borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.08)', color: '#F87171',
+                        fontSize: '18px', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer'
+                      }}
+                    >⌫</button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={supervisorPin.length < 4 || supervisorLoading}
+                    style={{
+                      width: '100%', padding: '13px', borderRadius: '12px',
+                      background: supervisorPin.length === 4 ? 'linear-gradient(135deg, #D97706, #F59E0B)' : 'rgba(255,255,255,0.08)',
+                      color: '#FFFFFF', fontSize: '14px', fontWeight: 800,
+                      border: 'none', cursor: supervisorPin.length === 4 ? 'pointer' : 'not-allowed',
+                      boxShadow: supervisorPin.length === 4 ? '0 4px 14px rgba(217,119,6,0.4)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {supervisorLoading ? '⏳ Verifying...' : '🔓 Unlock My Team Roster'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            // Supervisor's Team Attendance
+            <div>
+              {/* Supervisor Info Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #D97706, #F59E0B)',
+                borderRadius: '14px', padding: '16px 24px', marginBottom: '20px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                boxShadow: '0 4px 14px rgba(217,119,6,0.3)'
+              }}>
+                <div>
+                  <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF' }}>
+                    {supervisorInfo.name}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginTop: '2px' }}>
+                    Section: {supervisorInfo.sectionName} · Floor: {supervisorInfo.floor}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <span style={{ background: 'rgba(255,255,255,0.2)', color: '#FFFFFF', fontSize: '12px', fontWeight: 800, padding: '6px 14px', borderRadius: '8px' }}>
+                    {supervisorTeam.length} Team Members
+                  </span>
+                  <button
+                    onClick={() => { setSupervisorInfo(null); setSupervisorPin(''); setSupervisorTeam([]); }}
+                    style={{
+                      background: 'rgba(0,0,0,0.2)', border: 'none', color: '#FFFFFF',
+                      fontSize: '12px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer'
+                    }}
+                  >
+                    🚪 Sign Out
+                  </button>
+                </div>
+              </div>
+
+              {/* Team Attendance Table */}
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
+                  📝 Today's Attendance — {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </h3>
+
+                {supervisorTeam.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>👥</div>
+                    <p style={{ fontWeight: 700, color: '#64748B' }}>No salesmen assigned to this section yet.</p>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>Ask the admin to assign staff with your Section Code: <strong>{supervisorInfo.sectionCode}</strong></p>
+                  </div>
+                ) : (
+                  <div className="data-table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Emp No</th>
+                          <th>Salesman Name</th>
+                          <th>Status</th>
+                          <th>Check-In</th>
+                          <th>Check-Out</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {supervisorTeam.map(r => {
+                          const isSaving = savingSupEmpId === r.empId;
+                          return (
+                            <tr key={r.empId}>
+                              <td className="mono" style={{ fontWeight: 800, color: '#D97706' }}>{r.empNo}</td>
+                              <td style={{ fontWeight: 700, color: '#0F172A' }}>{r.userName}</td>
+                              <td>
+                                <select
+                                  value={r.status}
+                                  onChange={(e) => handleSupRowChange(r.empId, 'status', e.target.value)}
+                                  style={{
+                                    padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
+                                    background: STATUS_CONFIG[r.status]?.bg || '#F1F5F9',
+                                    color: STATUS_CONFIG[r.status]?.color || '#475569',
+                                    border: '1px solid #CBD5E1', cursor: 'pointer'
+                                  }}
+                                >
+                                  <option value="present">✅ Present</option>
+                                  <option value="absent">❌ Absent</option>
+                                  <option value="late">⏰ Late</option>
+                                  <option value="half_day">🌓 Half Day</option>
+                                  <option value="leave">🏖️ On Leave</option>
+                                </select>
+                              </td>
+                              <td>
+                                <input type="time" value={r.checkIn || ''}
+                                  onChange={(e) => handleSupRowChange(r.empId, 'checkIn', e.target.value)}
+                                  style={{ padding: '6px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', width: '105px' }}
+                                />
+                              </td>
+                              <td>
+                                <input type="time" value={r.checkOut || ''}
+                                  onChange={(e) => handleSupRowChange(r.empId, 'checkOut', e.target.value)}
+                                  style={{ padding: '6px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #CBD5E1', width: '105px' }}
+                                />
+                              </td>
+                              <td>
+                                <button
+                                  onClick={() => handleSaveSupRow(r)}
+                                  disabled={isSaving}
+                                  style={{
+                                    padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
+                                    background: '#D97706', color: '#FFFFFF', border: 'none', cursor: 'pointer'
+                                  }}
+                                >
+                                  {isSaving ? '...' : 'Save'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -133,7 +133,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: '1440px', margin: '0 auto' }} className="fade-in">
+    <div className="page-container fade-in">
       {/* Top Welcome Title */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>

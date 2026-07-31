@@ -11,8 +11,10 @@ import {
   getChecklistMaster,
   addChecklistPoint,
   updateChecklistPoint,
-  deleteChecklistPoint
+  deleteChecklistPoint,
+  getSubmissions
 } from '../controllers/vmController';
+import { getVmUsers } from '../controllers/vmController';
 
 const router = express.Router();
 
@@ -24,11 +26,13 @@ router.post('/submit', submitChecklist);
 router.get('/reports', getAdminReports);
 router.get('/history', getHistory);
 router.get('/detail', getSubmissionDetail);
+router.get('/submissions', getSubmissions);
+router.get('/users', getVmUsers);
 
 // Configuration points editor
 router.get('/checklist-master', getChecklistMaster);
-router.get('/add-point', addChecklistPoint);
-router.get('/update-point', updateChecklistPoint);
-router.get('/delete-point', deleteChecklistPoint);
+router.post('/add-point', addChecklistPoint);
+router.put('/update-point/:id', updateChecklistPoint);
+router.delete('/delete-point/:id', deleteChecklistPoint);
 
 export default router;

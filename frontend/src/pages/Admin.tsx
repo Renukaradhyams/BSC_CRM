@@ -22,7 +22,7 @@ interface SectionRecord {
   managerEmail: string | null;
 }
 
-type AdminTab = 'users' | 'company' | 'sections' | 'system' | 'auditlog';
+type AdminTab = 'users' | 'company' | 'sections' | 'system' | 'auditlog' | 'supervisors';
 
 export default function Admin() {
   const { settings, checkSetupStatus } = useAuth();
@@ -30,11 +30,20 @@ export default function Admin() {
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [sections, setSections] = useState<SectionRecord[]>([]);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditLoading, setAuditLoading] = useState<boolean>(false);
+
+  // Supervisor form state
+  const [newSupName, setNewSupName] = useState<string>('');
+  const [newSupCode, setNewSupCode] = useState<string>('');
+  const [newSupSectionName, setNewSupSectionName] = useState<string>('');
+  const [newSupFloor, setNewSupFloor] = useState<string>('Ground Floor');
+  const [newSupPin, setNewSupPin] = useState<string>('');
+  const [creatingSuper, setCreatingSupervisor] = useState<boolean>(false);
 
   // Visible Passwords reveal state: set of user IDs whose credentials are password-unmasked
   const [revealedUsers, setRevealedUsers] = useState<Set<number>>(new Set());
@@ -90,15 +99,13 @@ export default function Admin() {
     try {
       setLoading(true);
       const userRes = await api.get('/api/crm/users');
-      if (userRes.data && userRes.data.ok) {
-        setUsers(userRes.data.users || []);
-      }
+      if (userRes.data?.ok) setUsers(userRes.data.users || []);
       const secRes = await api.get('/api/crm/sections');
-      if (secRes.data && secRes.data.ok) {
-        setSections(secRes.data.sections || []);
-      }
+      if (secRes.data?.ok) setSections(secRes.data.sections || []);
+      const supRes = await api.get('/api/attendance/supervisors');
+      if (supRes.data?.ok) setSupervisors(supRes.data.supervisors || []);
       const settingsRes = await api.get('/api/crm/settings');
-      if (settingsRes.data && settingsRes.data.ok && settingsRes.data.settings) {
+      if (settingsRes.data?.ok && settingsRes.data.settings) {
         const s = settingsRes.data.settings;
         setCompanyName(s.companyName);
         setCompanyLogoUrl(s.companyLogoUrl || '');
@@ -118,7 +125,7 @@ export default function Admin() {
         setDefaultRegisterRole(s.defaultRegisterRole || 'crm_staff');
         setRequireAdminApproval(s.requireAdminApproval !== undefined ? Boolean(s.requireAdminApproval) : false);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to fetch registry lists.');
     } finally {
       setLoading(false);
@@ -262,6 +269,7 @@ export default function Admin() {
 
       {/* Admin Tab Navigation */}
       <div 
+        className="scroll-tabs"
         style={{
           display: 'flex',
           gap: '8px',
@@ -271,9 +279,10 @@ export default function Admin() {
         }}
       >
         {[
-          { id: 'users', label: '🔑 User Vault & Access', count: users.length },
+        { id: 'users', label: '🔑 User Vault & Access', count: users.length },
           { id: 'company', label: '🏢 Store Settings' },
           { id: 'sections', label: '🏪 Floor Sections', count: sections.length },
+          { id: 'supervisors', label: '👔 Section Supervisors', count: supervisors.length },
           { id: 'system', label: '📊 System Status' },
           { id: 'auditlog', label: '🔍 Audit Log' }
         ].map(tab => (
@@ -956,6 +965,162 @@ export default function Admin() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 6: Section Supervisors */}
+      {activeTab === 'supervisors' && (
+        <div className="fade-in">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '24px', alignItems: 'start' }}>
+            {/* Add Supervisor Form */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
+                👔 Add Section Supervisor
+              </h3>
+              <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '20px' }}>
+                Section supervisors use their 4-digit PIN to log in and mark attendance for their assigned salesmen team.
+              </p>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newSupName || !newSupCode || !newSupPin || newSupPin.length !== 4) {
+                  setError('Name, section code, and a 4-digit PIN are required.');
+                  return;
+                }
+                try {
+                  setCreatingSupervisor(true);
+                  setError(''); setSuccess('');
+                  const res = await api.post('/api/attendance/supervisors', {
+                    name: newSupName,
+                    sectionCode: newSupCode.toUpperCase(),
+                    sectionName: newSupSectionName || newSupCode,
+                    floor: newSupFloor,
+                    pin: newSupPin
+                  });
+                  if (res.data?.ok) {
+                    setSuccess(`Supervisor "${newSupName}" added with PIN ${newSupPin}`);
+                    setNewSupName(''); setNewSupCode(''); setNewSupSectionName(''); setNewSupPin('');
+                    const upd = await api.get('/api/attendance/supervisors');
+                    if (upd.data?.ok) setSupervisors(upd.data.supervisors || []);
+                  } else {
+                    setError(res.data?.error || 'Failed to add supervisor.');
+                  }
+                } catch (err: any) {
+                  setError(err.response?.data?.error || 'Failed to add supervisor.');
+                } finally {
+                  setCreatingSupervisor(false);
+                }
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <div className="field">
+                  <label>Supervisor Name <span className="req">*</span></label>
+                  <input type="text" value={newSupName} onChange={(e) => setNewSupName(e.target.value)} placeholder="e.g. RAVI KUMAR" required />
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label>Section Code <span className="req">*</span></label>
+                    <input type="text" value={newSupCode} onChange={(e) => setNewSupCode(e.target.value.toUpperCase())} placeholder="e.g. SAREE-1" required maxLength={10} />
+                  </div>
+                  <div className="field">
+                    <label>4-Digit PIN <span className="req">*</span></label>
+                    <input type="text" value={newSupPin} onChange={(e) => setNewSupPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="1234" required maxLength={4} className="mono" />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <label>Section / Display Name</label>
+                  <input type="text" value={newSupSectionName} onChange={(e) => setNewSupSectionName(e.target.value)} placeholder="e.g. Sarees Division — North Wing" />
+                </div>
+
+                <div className="field">
+                  <label>Floor</label>
+                  <select value={newSupFloor} onChange={(e) => setNewSupFloor(e.target.value)}>
+                    <option value="Ground Floor">Ground Floor</option>
+                    <option value="First Floor">First Floor</option>
+                    <option value="Second Floor">Second Floor</option>
+                    <option value="Third Floor">Third Floor</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={creatingSuper}
+                  style={{
+                    padding: '11px', borderRadius: '10px',
+                    background: '#4F46E5', color: '#FFFFFF',
+                    fontWeight: 800, fontSize: '13px', border: 'none',
+                    cursor: creatingSuper ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(79,70,229,0.3)'
+                  }}
+                >
+                  {creatingSuper ? '⏳ Adding...' : '✅ Add Section Supervisor'}
+                </button>
+              </form>
+            </div>
+
+            {/* Supervisors List */}
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
+                🏢 Active Supervisors ({supervisors.length})
+              </h3>
+
+              {supervisors.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontSize: '13px' }}>
+                  <div style={{ fontSize: '36px', marginBottom: '10px' }}>👔</div>
+                  No section supervisors configured yet.
+                </div>
+              ) : (
+                <div className="data-table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th>Section</th>
+                        <th>Floor</th>
+                        <th>PIN</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supervisors.map((sup: any) => (
+                        <tr key={sup.id}>
+                          <td style={{ fontWeight: 700, color: '#0F172A' }}>{sup.name}</td>
+                          <td className="mono" style={{ fontWeight: 800, color: '#4F46E5', fontSize: '12px' }}>{sup.sectionCode}</td>
+                          <td style={{ fontSize: '12px' }}>{sup.sectionName || sup.sectionCode}</td>
+                          <td style={{ fontSize: '12px', color: '#64748B' }}>{sup.floor}</td>
+                          <td className="mono" style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '3px', color: '#D97706' }}>
+                            ••••
+                          </td>
+                          <td>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`Remove supervisor "${sup.name}"?`)) return;
+                                try {
+                                  const res = await api.delete(`/api/attendance/supervisors/${sup.id}`);
+                                  if (res.data?.ok) {
+                                    setSupervisors(prev => prev.filter(s => s.id !== sup.id));
+                                    setSuccess(`Supervisor "${sup.name}" removed.`);
+                                  }
+                                } catch {
+                                  setError('Failed to remove supervisor.');
+                                }
+                              }}
+                              style={{
+                                background: '#FEE2E2', color: '#EF4444', border: '1px solid #FCA5A5',
+                                padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer'
+                              }}
+                            >Remove</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

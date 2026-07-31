@@ -246,16 +246,21 @@ export async function initDb() {
 
   await query(`CREATE TABLE IF NOT EXISTS \`VMChecklistPoint\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-    \`pointNo\` INT UNIQUE NOT NULL,
+    \`pointNo\` INT NOT NULL,
     \`aspect\` VARCHAR(255) NOT NULL,
     \`point\` TEXT NOT NULL,
     \`type\` VARCHAR(100) NOT NULL,
+    \`floor\` VARCHAR(100) NULL,
     \`frequency\` VARCHAR(100) NOT NULL,
     \`isActive\` BOOLEAN DEFAULT TRUE,
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     \`deleted_at\` TIMESTAMP NULL
   )`);
+
+  // Safe migrations for VMChecklistPoint
+  try { await query("ALTER TABLE `VMChecklistPoint` ADD COLUMN `floor` VARCHAR(100) NULL"); } catch (_) {}
+  try { await query("ALTER TABLE `VMChecklistPoint` DROP INDEX `pointNo`"); } catch (_) {}
 
   await query(`CREATE TABLE IF NOT EXISTS \`VMSubmission\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,
@@ -264,10 +269,14 @@ export async function initDb() {
     \`floor\` VARCHAR(255) NULL,
     \`submittedBy\` VARCHAR(255) NOT NULL,
     \`score\` DECIMAL(5,2) NOT NULL,
+    \`submittedAt\` DATETIME NULL,
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     \`deleted_at\` TIMESTAMP NULL
   )`);
+
+  // Safe migrations for VMSubmission
+  try { await query("ALTER TABLE `VMSubmission` ADD COLUMN `submittedAt` DATETIME NULL"); } catch (_) {}
 
   await query(`CREATE TABLE IF NOT EXISTS \`VMSubmissionEntry\` (
     \`id\` INT AUTO_INCREMENT PRIMARY KEY,
@@ -317,6 +326,25 @@ export async function initDb() {
     \`section\` VARCHAR(100) NOT NULL,
     \`designation\` VARCHAR(100) NOT NULL,
     \`phone\` VARCHAR(50) NULL,
+    \`supervisorCode\` VARCHAR(50) NULL,
+    \`designationLevel\` VARCHAR(50) DEFAULT 'salesman',
+    \`isActive\` BOOLEAN DEFAULT TRUE,
+    \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    \`deleted_at\` TIMESTAMP NULL
+  )`);
+
+  // Safe migrations for Employee
+  try { await query("ALTER TABLE `Employee` ADD COLUMN `supervisorCode` VARCHAR(50) NULL"); } catch (_) {}
+  try { await query("ALTER TABLE `Employee` ADD COLUMN `designationLevel` VARCHAR(50) DEFAULT 'salesman'"); } catch (_) {}
+
+  await query(`CREATE TABLE IF NOT EXISTS \`SectionSupervisor\` (
+    \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+    \`name\` VARCHAR(255) NOT NULL,
+    \`sectionCode\` VARCHAR(50) UNIQUE NOT NULL,
+    \`sectionName\` VARCHAR(255) NOT NULL,
+    \`floor\` VARCHAR(100) DEFAULT 'Ground Floor',
+    \`pin\` VARCHAR(10) NOT NULL,
     \`isActive\` BOOLEAN DEFAULT TRUE,
     \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

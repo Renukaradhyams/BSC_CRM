@@ -57,3 +57,14 @@ export const markNotificationsRead = async (req: AuthenticatedRequest, res: Resp
     return res.status(500).json({ ok: false, error: err.message });
   }
 };
+
+// 4. Delete Notification
+export const deleteNotification = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await query(`DELETE FROM Notification WHERE id = ?`, [id]);
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+};

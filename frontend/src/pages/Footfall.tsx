@@ -36,7 +36,7 @@ export default function Footfall() {
   const [inputRemarks, setInputRemarks] = useState<string>('');
 
   // Past days bills state
-  const [pastDays, setPastDays] = useState<Array<{ date: string; dateLabel: string; bills: string; savedBills: number | null }>>([]);
+  const [pastDays, setPastDays] = useState<Array<{ date: string; dateLabel: string; bills: string; savedBills: number | null; editVal?: string }>>([]);
 
   const DEFAULT_SLOTS = Array.from({ length: 12 }, (_, i) => ({
     slotStart: 10 + i,
@@ -222,7 +222,7 @@ export default function Footfall() {
   const isAdmin = ['super_admin', 'admin', 'crm_manager'].includes(user?.role || '');
 
   return (
-    <div style={{ padding: '24px 32px', width: '100%' }} className="fade-in">
+    <div className="page-container fade-in">
       {/* Top Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -287,50 +287,151 @@ export default function Footfall() {
         </div>
       </div>
 
-      {/* Neat Bill Count Update Card */}
-      <div className="glass-card" style={{ padding: '20px 24px', marginBottom: '28px', background: '#FFFFFF' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <h3 className="outfit" style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              💵 Day-end Sales Bill Count Register
-            </h3>
-            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>Update daily generated bills count for store performance analytics</p>
+      {/* Premium Bills Count Register Card */}
+      <div style={{ marginBottom: '28px' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: '16px'
+        }}>
+          {/* Today's Bills Input Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+            borderRadius: '16px',
+            padding: '20px 24px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            border: '1px solid rgba(255,255,255,0.06)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  DAY-END BILLS REGISTER
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+                  {dateQuery}
+                </div>
+              </div>
+              <div style={{ fontSize: '24px' }}>💵</div>
+            </div>
+
+            {/* Big counter display */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <button
+                type="button"
+                onClick={() => setBills(b => String(Math.max(0, parseInt(b || '0', 10) - 1)))}
+                style={{
+                  width: '36px', height: '36px', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#FFFFFF', fontSize: '18px', cursor: 'pointer', fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >−</button>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={bills}
+                  onChange={(e) => setBills(e.target.value)}
+                  style={{
+                    width: '100%', textAlign: 'center',
+                    padding: '8px 0', border: 'none', background: 'transparent',
+                    fontSize: '40px', fontWeight: 900, color: '#FFFFFF',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    outline: 'none',
+                    lineHeight: 1
+                  }}
+                />
+                <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px', fontWeight: 600 }}>
+                  bills today
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBills(b => String(parseInt(b || '0', 10) + 1))}
+                style={{
+                  width: '36px', height: '36px', borderRadius: '8px',
+                  background: 'rgba(79,70,229,0.3)', border: '1px solid rgba(79,70,229,0.5)',
+                  color: '#A5B4FC', fontSize: '18px', cursor: 'pointer', fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >+</button>
+            </div>
+
+            <form onSubmit={handleSaveBills}>
+              <button
+                type="submit"
+                disabled={savingBills}
+                style={{
+                  width: '100%', padding: '10px',
+                  borderRadius: '10px',
+                  background: savingBills ? 'rgba(255,255,255,0.07)' : 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  color: '#FFFFFF', fontSize: '13px', fontWeight: 800,
+                  border: 'none', cursor: savingBills ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(79,70,229,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                {savingBills ? '⏳ Saving...' : '💾 Save Bills Count'}
+              </button>
+            </form>
           </div>
 
-          <form onSubmit={handleSaveBills} style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <input
-              type="number"
-              placeholder="Enter bills count..."
-              value={bills}
-              onChange={(e) => setBills(e.target.value)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: '1px solid #CBD5E1',
-                fontSize: '13px',
-                fontWeight: 700,
-                width: '180px',
-                background: '#FAF7F2'
-              }}
-            />
-            <button
-              type="submit"
-              disabled={savingBills}
-              style={{
-                background: '#4F46E5',
-                color: '#FFFFFF',
-                padding: '8px 20px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                border: 'none',
-                boxShadow: '0 2px 6px rgba(79,70,229,0.3)'
-              }}
-            >
-              {savingBills ? 'Saving...' : '💾 Update Today Bills'}
-            </button>
-          </form>
+          {/* Past Days Bills History */}
+          {pastDays.slice(0, 4).map(pd => (
+            <div key={pd.date} style={{
+              background: '#FFFFFF',
+              border: '1.5px solid #E2E8F0',
+              borderRadius: '16px',
+              padding: '18px 20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+              display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    BILLS — {pd.date}
+                  </div>
+                </div>
+                <div style={{
+                  background: pd.savedBills != null ? '#ECFDF5' : '#F8FAFC',
+                  color: pd.savedBills != null ? '#047857' : '#94A3B8',
+                  fontSize: '10px', fontWeight: 800,
+                  padding: '2px 8px', borderRadius: '6px'
+                }}>
+                  {pd.savedBills != null ? '✓ SAVED' : 'NOT SET'}
+                </div>
+              </div>
+              <div className="mono" style={{ fontSize: '32px', fontWeight: 900, color: pd.savedBills != null ? '#0F172A' : '#94A3B8', marginBottom: '10px', lineHeight: 1 }}>
+                {pd.savedBills != null ? pd.savedBills : '—'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="number"
+                  placeholder="Update count..."
+                  value={pd.editVal ?? ''}
+                  onChange={(e) => setPastDays(prev => prev.map(p => p.date === pd.date ? { ...p, editVal: e.target.value } : p))}
+                  style={{
+                    flex: 1, padding: '7px 12px', borderRadius: '7px',
+                    border: '1px solid #CBD5E1', fontSize: '13px',
+                    fontWeight: 700, color: '#0F172A', background: '#FAF7F2'
+                  }}
+                />
+                <button
+                  onClick={() => handleSavePastDayBills(pd.date, pd.editVal || '')}
+                  disabled={!pd.editVal}
+                  style={{
+                    padding: '7px 14px', borderRadius: '7px',
+                    background: pd.editVal ? '#4F46E5' : '#E2E8F0',
+                    color: pd.editVal ? '#FFFFFF' : '#94A3B8',
+                    border: 'none', fontSize: '12px', fontWeight: 800,
+                    cursor: pd.editVal ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

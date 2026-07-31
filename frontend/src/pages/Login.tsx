@@ -129,33 +129,9 @@ export default function Login() {
         fontFamily: "'Inter', sans-serif"
       }}
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '1020px',
-          background: '#FFFFFF',
-          borderRadius: '20px',
-          border: '1px solid #EAE5DC',
-          boxShadow: '0 20px 40px -15px rgba(0,0,0,0.07)',
-          overflow: 'hidden',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          minHeight: '620px'
-        }}
-        className="fade-in"
-      >
+      <div className="login-card-container fade-in">
         {/* Left Side: Brand Banner */}
-        <div
-          style={{
-            background: 'linear-gradient(145deg, #1A233D 0%, #0F172A 100%)',
-            padding: '48px 40px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            color: '#FFFFFF',
-            position: 'relative'
-          }}
-        >
+        <div className="login-brand-side">
           <div>
             {/* Logo pill */}
             <div
@@ -167,7 +143,7 @@ export default function Login() {
                 border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '12px',
                 padding: '8px 16px',
-                marginBottom: '32px'
+                marginBottom: '24px'
               }}
             >
               <img
@@ -180,17 +156,17 @@ export default function Login() {
               </span>
             </div>
 
-            <h1 className="outfit" style={{ fontSize: '32px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.25, letterSpacing: '-0.5px' }}>
+            <h1 className="outfit" style={{ fontSize: '28px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.25, letterSpacing: '-0.5px' }}>
               Retail Operations & Customer Relationship Portal
             </h1>
 
-            <p style={{ fontSize: '14px', color: '#94A3B8', marginTop: '16px', lineHeight: 1.6 }}>
+            <p className="login-brand-desc" style={{ fontSize: '14px', color: '#94A3B8', marginTop: '16px', lineHeight: 1.6 }}>
               Streamlined footfall tracking, customer satisfaction telemetry, store diverts management, and daily cash settlements.
             </p>
           </div>
 
           {/* Bottom Banner Status */}
-          <div>
+          <div className="login-brand-footer">
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <div style={{ background: 'rgba(255,255,255,0.06)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ fontSize: '10px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Version</div>
@@ -211,7 +187,7 @@ export default function Login() {
         </div>
 
         {/* Right Side: Login Form */}
-        <div style={{ padding: '44px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div className="login-form-side">
           <div style={{ marginBottom: '24px' }}>
             <h2 className="outfit" style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A' }}>
               Sign In to Your Workspace

@@ -32,6 +32,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Notification State
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifDrawer, setShowNotifDrawer] = useState<boolean>(false);
+  const [notifTab, setNotifTab] = useState<'inbox' | 'compose'>('inbox');
   const [msgTitle, setMsgTitle] = useState<string>('');
   const [msgBody, setMsgBody] = useState<string>('');
   const [targetRole, setTargetRole] = useState<string>('ALL');
@@ -145,15 +146,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
         message: msgBody
       });
       if (res.data?.ok) {
-        setMsgSuccess('Completed: Broadcast message sent successfully!');
+        setMsgSuccess('Broadcast message sent successfully!');
         setMsgTitle('');
         setMsgBody('');
         fetchNotifications();
+        setTimeout(() => setMsgSuccess(''), 3000);
       }
     } catch {
       console.error('Failed to send broadcast notification');
     } finally {
       setSendingMsg(false);
+    }
+  };
+
+  const handleDeleteNotification = async (id: number) => {
+    try {
+      await api.delete(`/api/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch {
+      console.error('Failed to delete notification');
     }
   };
 
@@ -209,7 +220,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         { id: 'pm-view', path: '/app/pm-view', label: 'Purchase Manager', icon: '👔' },
         { id: 'vm-checklist', path: '/app/vm-checklist', label: 'VM Checklist', icon: '🏢' },
         { id: 'attendance', path: '/app/attendance', label: 'Staff Attendance', icon: '🗓️' },
-        { id: 'attendance-tv', path: '/app/attendance-tv', label: 'Floor TV Roster', icon: '📺', openNewTab: true },
+        { id: 'attendance-tv', path: '/app/attendance-tv', label: 'Floor TV Roster', icon: '📺' },
         { id: 'tv', path: '/app/tv', label: 'Live TV Display', icon: '📺' }
       ]
     },
@@ -237,6 +248,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const isManagerOrAdmin = ['super_admin', 'admin', 'crm_manager', 'telecaller'].includes(user?.role || '');
 
+  const roleColors: Record<string, string> = {
+    super_admin: '#F59E0B',
+    admin: '#3B82F6',
+    crm_manager: '#10B981',
+    crm_staff: '#6366F1',
+    telecaller: '#8B5CF6',
+    greeter: '#EC4899',
+    vm: '#14B8A6',
+    hr: '#F97316',
+    purchase_manager: '#EF4444',
+  };
+
+  const getRoleColor = () => roleColors[user?.role || ''] || '#94A3B8';
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF7F2', position: 'relative', fontFamily: "'Inter', sans-serif" }}>
       {/* Mobile Backdrop */}
@@ -256,23 +281,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
         className={mobileOpen ? 'mobile-open' : ''}
         style={{
           width: collapsed ? '80px' : '250px',
-          background: '#1A233D',
+          background: 'linear-gradient(175deg, #0F172A 0%, #1A233D 100%)',
           display: 'flex',
           flexDirection: 'column',
           flexShrink: 0,
           transition: 'width 0.25s ease',
           zIndex: 20,
-          boxShadow: '4px 0 20px rgba(0,0,0,0.08)'
+          boxShadow: '4px 0 24px rgba(0,0,0,0.15)'
         }}
       >
-        {/* Header with Brand Logo */}
+        {/* Header with Brand Logo & Collapse Toggle */}
         <div
           style={{
             padding: collapsed ? '20px 12px' : '20px 18px',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            borderBottom: '1px solid rgba(255,255,255,0.08)'
+            borderBottom: '1px solid rgba(255,255,255,0.07)'
           }}
         >
           <div
@@ -297,7 +322,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             />
           </div>
           {!collapsed && (
-            <div style={{ overflow: 'hidden' }}>
+            <div style={{ overflow: 'hidden', flex: 1 }}>
               <h2 className="outfit" style={{ fontSize: '15px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2, letterSpacing: '-0.2px' }}>
                 Retail CRM
               </h2>
@@ -306,14 +331,43 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </span>
             </div>
           )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: 'none',
+              borderRadius: '6px',
+              width: '24px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#94A3B8',
+              fontSize: '10px',
+              flexShrink: 0
+            }}
+          >
+            {collapsed ? '▶' : '◀'}
+          </button>
         </div>
 
         {/* User Role Banner inside Sidebar */}
         {!collapsed && user && (
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>{user.name}</div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#CBD5E1', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>
-              {user.role.replace('_', ' ')}
+          <div style={{ padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              background: getRoleColor(),
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '14px', fontWeight: 800, color: '#FFFFFF', flexShrink: 0
+            }}>
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>{user.name}</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: getRoleColor(), textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '1px' }}>
+                {user.role.replace(/_/g, ' ')}
+              </div>
             </div>
           </div>
         )}
@@ -330,7 +384,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <div style={{
                     fontSize: '10px',
                     fontWeight: 700,
-                    color: '#64748B',
+                    color: '#475569',
                     letterSpacing: '0.12em',
                     padding: '0 8px 8px 8px',
                     textTransform: 'uppercase'
@@ -344,11 +398,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <div
                       key={item.id}
                       onClick={() => {
-                        if (item.openNewTab) {
-                          window.open(item.path, '_blank');
-                        } else {
-                          navigate(item.path);
-                        }
+                        navigate(item.path);
+                        setMobileOpen(false);
                       }}
                       title={collapsed ? item.label : undefined}
                       style={{
@@ -365,6 +416,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         alignItems: 'center',
                         justifyContent: collapsed ? 'center' : 'space-between',
                         transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                          e.currentTarget.style.color = '#FFFFFF';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = '#94A3B8';
+                        }
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -394,8 +457,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           })}
         </nav>
 
-        {/* Footer Logout Button */}
-        <div style={{ padding: '14px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        {/* Footer: Logout + Developer Credit */}
+        <div style={{ padding: '14px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <button
             onClick={handleLogout}
             style={{
@@ -420,10 +483,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <span>🚪</span>
             {!collapsed && <span>Sign Out</span>}
           </button>
+
+          {/* Developer Credit */}
+          {!collapsed && (
+            <div style={{
+              marginTop: '10px',
+              textAlign: 'center',
+              fontSize: '10px',
+              color: '#475569',
+              lineHeight: 1.4,
+              letterSpacing: '0.01em'
+            }}>
+              Designed & Developed by{' '}
+              <span style={{ color: '#818CF8', fontWeight: 700 }}>Renukaradhya M S</span>
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* Main Content Area with Sticky/Anchored Bottom Developer Footer */}
+      {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: '#FAF7F2' }}>
         {/* Top Bar */}
         <header
@@ -469,10 +547,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <button
                 onClick={() => {
                   setShowNotifDrawer(!showNotifDrawer);
-                  markRead();
+                  if (!showNotifDrawer) markRead();
                 }}
                 style={{
-                  background: '#FAF7F2',
+                  background: showNotifDrawer ? '#4F46E5' : '#FAF7F2',
                   border: '1px solid #CBD5E1',
                   borderRadius: '10px',
                   width: '36px',
@@ -482,7 +560,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   justifyContent: 'center',
                   fontSize: '18px',
                   cursor: 'pointer',
-                  position: 'relative'
+                  position: 'relative',
+                  transition: 'all 0.15s ease'
                 }}
                 title="Notifications & Broadcast Messages"
               >
@@ -503,7 +582,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(239,68,68,0.4)'
+                      boxShadow: '0 2px 6px rgba(239,68,68,0.4)',
+                      animation: 'pulse 1.5s ease infinite'
                     }}
                   >
                     {unreadCount}
@@ -514,31 +594,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
 
-        {/* Viewport Content Container with Anchored Footer */}
-        <main style={{ flex: 1, overflowY: 'auto', background: '#FAF7F2', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {children}
-          </div>
-
-          {/* Developer Credits Footer - Fixed at bottom end of content container */}
-          <footer
-            style={{
-              padding: '14px 28px',
-              borderTop: '1px solid #EAE5DC',
-              textAlign: 'right',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#64748B',
-              background: '#FFFFFF',
-              flexShrink: 0
-            }}
-          >
-            Designed and Developed by <span style={{ color: '#4F46E5', fontWeight: 800 }}>Renukaradhya M S</span>
-          </footer>
+        {/* Viewport Content Container */}
+        <main style={{ flex: 1, overflowY: 'auto', background: '#FAF7F2' }}>
+          {children}
         </main>
       </div>
 
-      {/* Slide-Over Redesigned Notification Drawer Panel */}
+      {/* ========== REDESIGNED NOTIFICATION DRAWER ========== */}
       {showNotifDrawer && (
         <div
           style={{
@@ -547,54 +609,135 @@ export default function AppLayout({ children }: AppLayoutProps) {
             zIndex: 100,
             display: 'flex',
             justifyContent: 'flex-end',
-            background: 'rgba(15, 23, 42, 0.4)',
-            backdropFilter: 'blur(3px)'
+            background: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(4px)'
           }}
           onClick={() => setShowNotifDrawer(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '420px',
-              maxWidth: '92vw',
+              width: '440px',
+              maxWidth: '95vw',
               height: '100%',
-              background: '#FFFFFF',
-              boxShadow: '-4px 0 28px rgba(0,0,0,0.18)',
+              background: '#0F172A',
+              boxShadow: '-8px 0 40px rgba(0,0,0,0.4)',
               display: 'flex',
               flexDirection: 'column',
-              padding: '24px'
+              borderLeft: '1px solid rgba(255,255,255,0.08)'
             }}
             className="fade-in"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                🔔 Broadcast & Telemetry Desk
-              </h3>
+            {/* Drawer Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #1E293B, #0F172A)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '36px', height: '36px', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', boxShadow: '0 4px 12px rgba(79,70,229,0.4)'
+                }}>
+                  🔔
+                </div>
+                <div>
+                  <h3 className="outfit" style={{ fontSize: '16px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1 }}>
+                    Notifications
+                  </h3>
+                  <p style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                    {unreadCount > 0 ? `${unreadCount} unread messages` : 'All caught up!'}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowNotifDrawer(false)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748B' }}
+                style={{
+                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer',
+                  color: '#94A3B8', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Broadcast Composer for Managers & Admins */}
+            {/* Tab Switcher (only for managers/admins) */}
             {isManagerOrAdmin && (
-              <div style={{ background: '#FAF7F2', border: '1.5px solid #E2E8F0', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  ✉️ Compose Broadcast Notification
-                </h4>
+              <div style={{
+                display: 'flex',
+                padding: '12px 16px',
+                gap: '8px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                background: '#0F172A'
+              }}>
+                <button
+                  onClick={() => setNotifTab('inbox')}
+                  style={{
+                    flex: 1, padding: '8px', borderRadius: '8px',
+                    background: notifTab === 'inbox' ? '#1E293B' : 'transparent',
+                    border: notifTab === 'inbox' ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
+                    color: notifTab === 'inbox' ? '#FFFFFF' : '#64748B',
+                    fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  📥 Inbox
+                  {unreadCount > 0 && (
+                    <span style={{ background: '#EF4444', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '1px 5px', borderRadius: '8px' }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setNotifTab('compose')}
+                  style={{
+                    flex: 1, padding: '8px', borderRadius: '8px',
+                    background: notifTab === 'compose' ? '#4F46E5' : 'transparent',
+                    border: notifTab === 'compose' ? '1px solid #4F46E5' : '1px solid transparent',
+                    color: notifTab === 'compose' ? '#FFFFFF' : '#64748B',
+                    fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  📤 Broadcast
+                </button>
+              </div>
+            )}
 
-                {msgSuccess && <div style={{ fontSize: '12px', color: '#059669', fontWeight: 800, marginBottom: '10px', background: '#D1FAE5', padding: '6px 10px', borderRadius: '6px' }}>{msgSuccess}</div>}
+            {/* COMPOSE TAB */}
+            {isManagerOrAdmin && notifTab === 'compose' && (
+              <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+                {msgSuccess && (
+                  <div style={{
+                    background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '10px', padding: '12px 16px', marginBottom: '16px',
+                    color: '#10B981', fontSize: '13px', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', gap: '8px'
+                  }}>
+                    ✅ {msgSuccess}
+                  </div>
+                )}
 
-                <form onSubmit={handleSendNotification}>
-                  <div style={{ marginBottom: '10px' }}>
+                <form onSubmit={handleSendNotification} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
+                      Target Audience
+                    </label>
                     <select
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 700, background: '#FFFFFF' }}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: '10px',
+                        border: '1px solid rgba(255,255,255,0.1)', fontSize: '13px', fontWeight: 600,
+                        background: '#1E293B', color: '#FFFFFF'
+                      }}
                     >
-                      <option value="ALL">📢 All Logged-in Staff Users</option>
+                      <option value="ALL">📢 All Logged-in Staff</option>
                       <option value="crm_manager">👔 CRM Managers</option>
                       <option value="greeter">👋 Greeters</option>
                       <option value="telecaller">📞 Telecallers</option>
@@ -602,25 +745,40 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </select>
                   </div>
 
-                  <div style={{ marginBottom: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
+                      Notification Title
+                    </label>
                     <input
                       type="text"
-                      placeholder="Notification Title / Alert"
+                      placeholder="e.g. Urgent: Staff Meeting at 3 PM"
                       value={msgTitle}
                       onChange={(e) => setMsgTitle(e.target.value)}
                       required
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', background: '#FFFFFF' }}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: '10px',
+                        border: '1px solid rgba(255,255,255,0.1)', fontSize: '13px',
+                        background: '#1E293B', color: '#FFFFFF'
+                      }}
                     />
                   </div>
 
-                  <div style={{ marginBottom: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '6px' }}>
+                      Message Body
+                    </label>
                     <textarea
                       placeholder="Type broadcast announcement details..."
-                      rows={3}
+                      rows={4}
                       value={msgBody}
                       onChange={(e) => setMsgBody(e.target.value)}
                       required
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12px', resize: 'vertical', background: '#FFFFFF' }}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: '10px',
+                        border: '1px solid rgba(255,255,255,0.1)', fontSize: '13px',
+                        resize: 'vertical', background: '#1E293B', color: '#FFFFFF',
+                        fontFamily: 'inherit'
+                      }}
                     />
                   </div>
 
@@ -628,57 +786,119 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     type="submit"
                     disabled={sendingMsg}
                     style={{
-                      width: '100%',
-                      padding: '9px',
-                      borderRadius: '8px',
-                      background: '#4F46E5',
-                      color: '#FFFFFF',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      border: 'none',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(79,70,229,0.3)'
+                      width: '100%', padding: '12px',
+                      borderRadius: '10px',
+                      background: sendingMsg ? '#334155' : 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                      color: '#FFFFFF', fontSize: '13px', fontWeight: 800,
+                      border: 'none', cursor: sendingMsg ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 14px rgba(79,70,229,0.35)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                     }}
                   >
-                    {sendingMsg ? 'Sending...' : '📤 Send Broadcast Message'}
+                    {sendingMsg ? '⏳ Sending...' : '📤 Send Broadcast Message'}
                   </button>
                 </form>
               </div>
             )}
 
-            {/* Notifications Feed List */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {notifications.length > 0 ? (
-                notifications.map(n => (
-                  <div
-                    key={n.id}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{n.title}</span>
-                      <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: '#475569', margin: '4px 0 8px 0', lineHeight: 1.4 }}>
-                      {n.message}
-                    </p>
-                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #F1F5F9', paddingTop: '6px' }}>
-                      <span>From: <strong style={{ color: '#0F172A' }}>{n.senderName}</strong> ({n.senderRole})</span>
-                      <span style={{ color: '#4F46E5', fontWeight: 800 }}>Target: {n.targetRole}</span>
-                    </div>
+            {/* INBOX TAB */}
+            {(!isManagerOrAdmin || notifTab === 'inbox') && (
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+                {/* Mark all read + clear options */}
+                {notifications.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', gap: '8px' }}>
+                    <button
+                      onClick={markRead}
+                      style={{
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#94A3B8', fontSize: '11px', fontWeight: 700, padding: '5px 10px',
+                        borderRadius: '6px', cursor: 'pointer'
+                      }}
+                    >
+                      ✓ Mark all read
+                    </button>
                   </div>
-                ))
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94A3B8', fontSize: '13px' }}>
-                  No notifications or broadcasts recorded yet.
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {notifications.length > 0 ? (
+                    notifications.map(n => (
+                      <div
+                        key={n.id}
+                        style={{
+                          background: n.isRead ? 'rgba(30,41,59,0.6)' : 'rgba(79,70,229,0.12)',
+                          border: `1px solid ${n.isRead ? 'rgba(255,255,255,0.07)' : 'rgba(79,70,229,0.35)'}`,
+                          borderRadius: '12px',
+                          padding: '14px 16px',
+                          transition: 'all 0.2s ease',
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Unread indicator */}
+                        {!n.isRead && (
+                          <div style={{
+                            position: 'absolute', top: '14px', right: '14px',
+                            width: '8px', height: '8px', borderRadius: '50%',
+                            background: '#4F46E5', boxShadow: '0 0 6px rgba(79,70,229,0.6)'
+                          }} />
+                        )}
+
+                        {/* Title row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', paddingRight: '16px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.3 }}>
+                            {n.title}
+                          </span>
+                        </div>
+
+                        {/* Message */}
+                        <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+                          {n.message}
+                        </p>
+
+                        {/* Footer row */}
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px'
+                        }}>
+                          <div style={{ fontSize: '11px', color: '#475569' }}>
+                            <span style={{ color: '#94A3B8' }}>From: </span>
+                            <span style={{ color: '#CBD5E1', fontWeight: 700 }}>{n.senderName}</span>
+                            <span style={{ color: '#475569' }}> → </span>
+                            <span style={{ color: '#818CF8', fontWeight: 700 }}>{n.targetRole}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '10px', color: '#475569' }}>
+                              {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isManagerOrAdmin && (
+                              <button
+                                onClick={() => handleDeleteNotification(n.id)}
+                                style={{
+                                  background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.25)',
+                                  color: '#F87171', fontSize: '10px', fontWeight: 700,
+                                  padding: '3px 8px', borderRadius: '6px', cursor: 'pointer'
+                                }}
+                                title="Delete notification"
+                              >
+                                🗑 Delete
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#475569' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.4 }}>🔔</div>
+                      <p style={{ fontSize: '14px', fontWeight: 700, color: '#64748B' }}>No notifications yet</p>
+                      <p style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                        {isManagerOrAdmin ? 'Use Broadcast tab to send messages to staff.' : 'You\'ll see messages from managers here.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

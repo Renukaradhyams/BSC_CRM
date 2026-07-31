@@ -4,6 +4,16 @@ import mysql from 'mysql2/promise';
 
 const FLOORS = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor"];
 
+// Get list of VM users for login dropdown
+export const getVmUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await query(
+      'SELECT id, name, role FROM VMUser WHERE isActive=TRUE AND deleted_at IS NULL ORDER BY name ASC'
+    );
+    return res.json({ ok: true, users });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
+};
+
 // Get VM team user dashboard summary
 export const getVmDashboard = async (req: Request, res: Response) => {
   try {
@@ -83,18 +93,33 @@ export const getAdminDashboard = async (req: Request, res: Response) => {
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// Get VM Checklist Points
+// Get VM Checklist Points (with floor-specific filtering)
 export const getChecklist = async (req: Request, res: Response) => {
   try {
     const type = req.query.type as string || 'overall';
-    const points = await query(
-      'SELECT * FROM VMChecklistPoint WHERE type=? AND isActive=TRUE AND deleted_at IS NULL ORDER BY pointNo',
-      [type]
-    );
+    const floor = req.query.floor as string | undefined;
+
+    let points;
+    if (type === 'floor' && floor) {
+      // Fetch questions specific to this floor, OR general floor questions (floor IS NULL)
+      points = await query(
+        `SELECT * FROM VMChecklistPoint 
+         WHERE type='floor' AND isActive=TRUE AND deleted_at IS NULL 
+         AND (floor = ? OR floor IS NULL)
+         ORDER BY pointNo`,
+        [floor]
+      );
+    } else {
+      points = await query(
+        'SELECT * FROM VMChecklistPoint WHERE type=? AND isActive=TRUE AND deleted_at IS NULL ORDER BY pointNo',
+        [type]
+      );
+    }
+
     return res.json({
       ok: true,
       points: points.map((p: any) => ({
-        point_no: p.pointNo, aspect: p.aspect, point: p.point, frequency: p.frequency
+        point_no: p.pointNo, aspect: p.aspect, point: p.point, frequency: p.frequency, floor: p.floor
       }))
     });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
@@ -123,12 +148,13 @@ export const getTodaySubmission = async (req: Request, res: Response) => {
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
-// Submit checklist responses
+// Submit checklist responses (with timestamp)
 export const submitChecklist = async (req: Request, res: Response) => {
   try {
-    const { action, submitted_by, data, floor } = req.body;
+    const { action, submitted_by, data, floor, submitted_at } = req.body;
     const type = action === 'submit_floor' ? 'floor' : 'overall';
     const todayStr = new Date().toISOString().split('T')[0];
+    const submittedAt = submitted_at ? new Date(submitted_at) : new Date();
 
     const entries = JSON.parse(data);
     if (!entries || !Array.isArray(entries)) {
@@ -139,13 +165,14 @@ export const submitChecklist = async (req: Request, res: Response) => {
     entries.forEach((e: any) => {
       if (e.value === 'yes') { sum += 5; count++; }
       else if (e.value === 'no') { sum += 1; count++; }
+      else if (e.value === 'na') { sum += 3; } // N/A counts as neutral
     });
     const score = count > 0 ? sum / count : 5.0;
 
     await transaction(async (conn: mysql.PoolConnection) => {
       const [result] = await conn.execute(
-        'INSERT INTO VMSubmission (date, type, floor, submittedBy, score) VALUES (?, ?, ?, ?, ?)',
-        [todayStr, type, floor || null, submitted_by, score]
+        'INSERT INTO VMSubmission (date, type, floor, submittedBy, score, submittedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [todayStr, type, floor || null, submitted_by, score, submittedAt]
       ) as any;
       const subId = (result as any).insertId;
 
@@ -162,6 +189,18 @@ export const submitChecklist = async (req: Request, res: Response) => {
     console.error('VM Checklist save error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
+};
+
+// Get recent VM submissions (for dashboard display)
+export const getSubmissions = async (req: Request, res: Response) => {
+  try {
+    const dateStr = req.query.date as string || new Date().toISOString().split('T')[0];
+    const submissions = await query(
+      'SELECT * FROM VMSubmission WHERE date = ? AND deleted_at IS NULL ORDER BY id DESC',
+      [dateStr]
+    );
+    return res.json({ ok: true, submissions });
+  } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
 
 // Historical compliance reports
