@@ -162,6 +162,52 @@ export default function Attendance() {
     }
   };
 
+  // Group Status State for Attendance Register
+  const [selectedRegisterEmpIds, setSelectedRegisterEmpIds] = useState<number[]>([]);
+  const [groupStatus, setGroupStatus] = useState<string>('present');
+  const [updatingRegisterGroup, setUpdatingRegisterGroup] = useState<boolean>(false);
+
+  const toggleSelectRegisterEmp = (id: number) => {
+    setSelectedRegisterEmpIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAllRegister = (displayedEmps: AttendanceRecord[]) => {
+    const displayedIds = displayedEmps.map(e => e.empId);
+    const allSelected = displayedIds.length > 0 && displayedIds.every(id => selectedRegisterEmpIds.includes(id));
+    if (allSelected) {
+      setSelectedRegisterEmpIds(prev => prev.filter(id => !displayedIds.includes(id)));
+    } else {
+      setSelectedRegisterEmpIds(prev => Array.from(new Set([...prev, ...displayedIds])));
+    }
+  };
+
+  const handleGroupStatusSubmit = async () => {
+    if (selectedRegisterEmpIds.length === 0) return;
+    try {
+      setUpdatingRegisterGroup(true);
+      setError(''); setSuccess('');
+      const apiDate = inputToApi(selectedDateInput);
+      
+      const promises = selectedRegisterEmpIds.map(empId => 
+        api.post('/api/attendance', {
+          empId,
+          date: apiDate,
+          status: groupStatus,
+          markedByName: user?.name
+        })
+      );
+      await Promise.all(promises);
+      
+      setSuccess(`Group Edit Success: Marked ${selectedRegisterEmpIds.length} employee(s) as ${STATUS_CONFIG[groupStatus]?.label || groupStatus}.`);
+      setSelectedRegisterEmpIds([]);
+      fetchAttendance();
+    } catch {
+      setError('Error performing group status edit.');
+    } finally {
+      setUpdatingRegisterGroup(false);
+    }
+  };
+
   const handleGroupEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedEmpIds.length === 0) return;
@@ -761,13 +807,55 @@ export default function Attendance() {
 
           {/* Register Table */}
           <div className="glass-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 className="outfit" style={{ fontSize: '17px', fontWeight: 700, color: '#0F172A' }}>
-                Daily Register Sheet
-              </h3>
-              <span style={{ fontSize: '12px', color: '#64748B' }}>
-                Showing {records.length} staff records
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h3 className="outfit" style={{ fontSize: '17px', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                  Daily Register Sheet
+                </h3>
+                {selectedRegisterEmpIds.length > 0 && (
+                  <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE' }}>
+                    {selectedRegisterEmpIds.length} selected
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {selectedRegisterEmpIds.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Mark Selected As:</span>
+                    <select
+                      value={groupStatus}
+                      onChange={(e) => setGroupStatus(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, border: '1px solid #CBD5E1', cursor: 'pointer' }}
+                    >
+                      <option value="present">✅ Present</option>
+                      <option value="absent">❌ Absent</option>
+                      <option value="late">⏰ Late</option>
+                      <option value="half_day">🌓 Half Day</option>
+                      <option value="leave">🏖️ On Leave</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleGroupStatusSubmit}
+                      disabled={updatingRegisterGroup}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        background: updatingRegisterGroup ? '#94A3B8' : '#4F46E5',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        cursor: updatingRegisterGroup ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {updatingRegisterGroup ? 'Saving...' : 'Apply Status'}
+                    </button>
+                  </div>
+                )}
+                <span style={{ fontSize: '12px', color: '#64748B' }}>
+                  Showing {records.length} staff records
+                </span>
+              </div>
             </div>
 
             {loading ? (
@@ -787,6 +875,14 @@ export default function Attendance() {
                 <table className="data-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          checked={paginatedRegisterRecords.length > 0 && paginatedRegisterRecords.every(r => selectedRegisterEmpIds.includes(r.empId))}
+                          onChange={() => toggleSelectAllRegister(paginatedRegisterRecords)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                      </th>
                       <th>Emp No</th>
                       <th>Employee Name</th>
                       <th>Department / Section</th>
@@ -801,7 +897,15 @@ export default function Attendance() {
                     {paginatedRegisterRecords.map((r) => {
                       const isSaving = savingEmpId === r.empId;
                       return (
-                        <tr key={r.empId}>
+                        <tr key={r.empId} style={{ background: selectedRegisterEmpIds.includes(r.empId) ? '#EEF2FF' : 'transparent' }}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedRegisterEmpIds.includes(r.empId)}
+                              onChange={() => toggleSelectRegisterEmp(r.empId)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </td>
                           <td className="mono" style={{ fontWeight: 800, color: '#4F46E5', fontSize: '12px' }}>
                             {r.empNo}
                           </td>
