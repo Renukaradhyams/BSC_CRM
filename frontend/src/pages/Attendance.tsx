@@ -71,7 +71,7 @@ export default function Attendance() {
         const supInfo = JSON.parse(storedSup);
         setSupervisorInfo(supInfo);
 
-        api.get(`/api/attendance/supervisor/team?sectionCode=${supInfo.sectionCode}&date=${inputToApi(new Date())}`)
+        api.get(`/api/attendance/supervisor/team?sectionCode=${supInfo.sectionCode}&date=${formatDateForApi(new Date())}`)
           .then(res => {
             if (res.data?.ok) {
               setSupervisorTeam(res.data.records || []);
