@@ -301,7 +301,7 @@ export default function Dashboard() {
 
 
       {/* Main Grid: Footfall Hourly Bar Chart & Customer Feedback Voices */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '28px' }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '28px' }}>
         {/* Hourly Footfall Chart Container */}
         <div
           style={{
@@ -329,8 +329,10 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Bar Chart Visualization */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '180px', paddingTop: '20px' }}>
+          {/* Bar Chart Visualization with Mobile Scroll */}
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '180px', paddingTop: '20px', minWidth: '400px' }}>
+
             {slots.map((slot) => {
               const maxVal = Math.max(...slots.map(s => s.count), 50);
               const heightPct = Math.max(10, Math.round((slot.count / maxVal) * 100));
@@ -361,10 +363,12 @@ export default function Dashboard() {
                 </div>
               );
             })}
+            </div>
           </div>
         </div>
 
         {/* Recent Customer Voices Box */}
+
         <div
           style={{
             background: '#FFFFFF',

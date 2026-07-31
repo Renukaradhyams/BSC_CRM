@@ -101,19 +101,21 @@ export const saveFootfall = async (req: Request, res: Response) => {
 };
 
 // 4. Save Daily Bills Count
-export const saveDailyBills = async (req: Request, res: Response) => {
+export const saveDailyBills = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { date, billsCount } = req.body;
-    if (!date || billsCount === undefined) {
-      return res.status(400).json({ ok: false, error: 'Missing bills data' });
+    const { date, billsCount, bills } = req.body;
+    const finalBillsCount = billsCount !== undefined ? parseInt(billsCount, 10) : (bills !== undefined ? parseInt(bills, 10) : undefined);
+    if (!date || finalBillsCount === undefined || isNaN(finalBillsCount)) {
+      return res.status(400).json({ ok: false, error: 'Missing date or valid bills count data' });
     }
     await query(
       'INSERT INTO DailySummary (date, billsCount) VALUES (?, ?) ON DUPLICATE KEY UPDATE billsCount = VALUES(billsCount)',
-      [date, billsCount]
+      [date, finalBillsCount]
     );
     return res.json({ ok: true });
   } catch (err: any) { return res.status(500).json({ ok: false, error: err.message }); }
 };
+
 
 // 5. Get Feedback Questions
 export const getFeedbackQuestions = async (req: Request, res: Response) => {

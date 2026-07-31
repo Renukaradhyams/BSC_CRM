@@ -189,6 +189,7 @@ export default function Footfall() {
 
       const res = await api.post('/api/crm/bills', {
         date: ddmmyyyy,
+        billsCount: billsVal,
         bills: billsVal
       });
 
@@ -209,7 +210,7 @@ export default function Footfall() {
     if (isNaN(val) || val < 0) return;
 
     try {
-      const res = await api.post('/api/crm/bills', { date: dateStr, bills: val });
+      const res = await api.post('/api/crm/bills', { date: dateStr, billsCount: val, bills: val });
       if (res.data && res.data.ok) {
         setSuccess(`Completed: Updated ${val} bills for ${dateStr}!`);
         setPastDays(prev => prev.map(p => p.date === dateStr ? { ...p, savedBills: val } : p));
@@ -218,6 +219,7 @@ export default function Footfall() {
       setError(`Failed to update bills for ${dateStr}`);
     }
   };
+
 
   const isAdmin = ['super_admin', 'admin', 'crm_manager'].includes(user?.role || '');
 

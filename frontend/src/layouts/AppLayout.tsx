@@ -32,8 +32,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Notification State
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifDrawer, setShowNotifDrawer] = useState<boolean>(false);
-  const [notifTab, setNotifTab] = useState<'inbox' | 'broadcast'>('inbox');
+  const [notifTab, setNotifTab] = useState<'inbox' | 'compose' | 'broadcast'>('inbox');
   const [showBroadcastModal, setShowBroadcastModal] = useState<boolean>(false);
+
   const [msgTitle, setMsgTitle] = useState<string>('');
 
   const [msgBody, setMsgBody] = useState<string>('');
@@ -179,36 +180,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
     } catch { /* ignore */ }
   };
 
-  // Role visibility filter (Cash Settlement removed)
+  // Role visibility filter
   const showMenu = (item: string): boolean => {
     if (!user) return false;
     const role = user.role;
-    if (role === 'super_admin' || role === 'admin') return true;
+    if (role === 'super_admin' || role === 'admin' || role === 'crm_manager') return true;
 
-    switch (item) {
-      case 'dashboard':
-      case 'reports':
-      case 'feedback-qr':
-      case 'tv':
-      case 'footfall':
-      case 'divert':
-        return ['crm_manager', 'crm_staff', 'greeter', 'telecaller'].includes(role);
-      case 'feedback-list':
-        return ['crm_manager', 'telecaller', 'greeter'].includes(role);
-      case 'pm-view':
-        return role === 'purchase_manager';
-      case 'vm-checklist':
-        return ['crm_manager', 'vm'].includes(role);
-      case 'attendance':
-      case 'attendance-tv':
-        return ['crm_manager', 'admin', 'super_admin', 'hr', 'greeter', 'crm_staff'].includes(role);
-      case 'cash-settlement':
-      case 'admin':
-        return false;
-      default:
-        return false;
+    if (role === 'greeter') {
+      return ['footfall', 'feedback-qr', 'divert', 'tv', 'attendance-tv'].includes(item);
     }
+    if (role === 'telecaller') {
+      return ['feedback-list', 'feedback-qr', 'footfall'].includes(item);
+    }
+    if (role === 'vm') {
+      return ['vm-checklist', 'footfall'].includes(item);
+    }
+    if (role === 'purchase_manager') {
+      return ['pm-view', 'footfall'].includes(item);
+    }
+
+    return ['dashboard', 'footfall', 'feedback-qr', 'divert', 'tv', 'attendance-tv', 'attendance', 'reports'].includes(item);
   };
+
 
   const navCategories = [
     {
@@ -265,18 +258,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const getRoleColor = () => roleColors[user?.role || ''] || '#94A3B8';
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF7F2', position: 'relative', fontFamily: "'Inter', sans-serif" }}>
-      {/* Mobile Backdrop */}
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF7F2' }}>
+      {/* Mobile Backdrop Overlay */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-            zIndex: 19
-          }}
           className="mobile-sidebar-backdrop"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)', zIndex: 40
+          }}
         />
       )}
+
 
       {/* Deep Navy Premium Sidebar */}
       <aside
@@ -540,9 +534,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {/* Right Header Live Date/Time, Broadcast & Notification Bell Widget */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
-              <span>{dateStr}</span>
-              <span className="mono" style={{ marginLeft: '10px', fontWeight: 700, color: '#0F172A' }}>{timeStr}</span>
+              <span className="mobile-hide-date">{dateStr}</span>
+              <span className="mono" style={{ marginLeft: '6px', fontWeight: 700, color: '#0F172A' }}>{timeStr}</span>
             </div>
+
 
             {isManagerOrAdmin && (
               <button
