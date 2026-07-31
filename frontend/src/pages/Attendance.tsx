@@ -110,6 +110,7 @@ export default function Attendance() {
   // Strict 10-items-per-page Pagination State
   const [registerPage, setRegisterPage] = useState<number>(1);
   const [employeePage, setEmployeePage] = useState<number>(1);
+  const [supTeamPage, setSupTeamPage] = useState<number>(1);
 
 
   // Supervisors List for dropdown assignment
@@ -676,6 +677,10 @@ export default function Attendance() {
     setSupervisorTeam(prev => prev.map(r => r.empId === empId ? { ...r, [field]: val } : r));
   };
 
+  const filteredSupTeam = supervisorTeam.filter(r => 
+    r.userName.toLowerCase().includes(supTeamSearch.toLowerCase()) || 
+    r.empNo.toLowerCase().includes(supTeamSearch.toLowerCase())
+  );
 
   return (
     <div className="page-container fade-in">
@@ -1699,8 +1704,8 @@ export default function Attendance() {
                         </tr>
                       </thead>
                       <tbody>
-                        {supervisorTeam
-                          .filter(r => r.userName.toLowerCase().includes(supTeamSearch.toLowerCase()) || r.empNo.toLowerCase().includes(supTeamSearch.toLowerCase()))
+                        {filteredSupTeam
+                          .slice((supTeamPage - 1) * 10, supTeamPage * 10)
                           .map(r => {
                           const isSaving = savingSupEmpId === r.empId;
                           return (
@@ -1773,6 +1778,35 @@ export default function Attendance() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+                )}
+                
+                {/* Pagination Controls for Supervisor Team */}
+                {filteredSupTeam.length > 10 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '20px' }}>
+                    <button
+                      disabled={supTeamPage === 1}
+                      onClick={() => setSupTeamPage(prev => prev - 1)}
+                      style={{
+                        background: supTeamPage === 1 ? '#E2E8F0' : '#4F46E5', color: supTeamPage === 1 ? '#94A3B8' : '#FFFFFF',
+                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: supTeamPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 700
+                      }}
+                    >
+                      ◀ Prev
+                    </button>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569' }}>
+                      Page {supTeamPage} of {Math.ceil(filteredSupTeam.length / 10)}
+                    </span>
+                    <button
+                      disabled={supTeamPage * 10 >= filteredSupTeam.length}
+                      onClick={() => setSupTeamPage(prev => prev + 1)}
+                      style={{
+                        background: supTeamPage * 10 >= filteredSupTeam.length ? '#E2E8F0' : '#4F46E5', color: supTeamPage * 10 >= filteredSupTeam.length ? '#94A3B8' : '#FFFFFF',
+                        padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: supTeamPage * 10 >= filteredSupTeam.length ? 'not-allowed' : 'pointer', fontWeight: 700
+                      }}
+                    >
+                      Next ▶
+                    </button>
                   </div>
                 )}
               </div>
