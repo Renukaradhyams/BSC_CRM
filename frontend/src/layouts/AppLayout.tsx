@@ -766,6 +766,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     >
                       <option value="ALL">📢 All Logged-in Staff</option>
                       <option value="crm_manager">👔 CRM Managers</option>
+                      <option value="supervisor">👮 Supervisors</option>
                       <option value="greeter">👋 Greeters</option>
                       <option value="telecaller">📞 Telecallers</option>
                       <option value="crm_staff">👥 CRM Staff</option>
@@ -1018,6 +1019,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 >
                   <option value="ALL">📢 All Logged-in Staff</option>
                   <option value="crm_manager">👔 CRM Managers</option>
+                  <option value="supervisor">👮 Supervisors</option>
                   <option value="greeter">👋 Greeters</option>
                   <option value="telecaller">📞 Telecallers</option>
                   <option value="crm_staff">👥 CRM Staff</option>

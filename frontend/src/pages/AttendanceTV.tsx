@@ -198,7 +198,6 @@ export default function AttendanceTV() {
     );
   }
 
-  const uniqueFloors = Array.from(new Set(records.map(r => r.section).filter(Boolean)));
 
   return (
     <div
@@ -272,9 +271,15 @@ export default function AttendanceTV() {
               }}
             >
               <option value="ALL">All Store Floors & Sections</option>
-              {uniqueFloors.map(f => (
-                <option key={f} value={f}>{f}</option>
-              ))}
+              <option value="Sarees">Sarees Division</option>
+              <option value="Mens">Mens Suitings & Wear</option>
+              <option value="Kids">Kids & Ladies Wear</option>
+              <option value="Cash">Cash Counters</option>
+              <option value="Ground Floor">Ground Floor</option>
+              <option value="First Floor">First Floor</option>
+              <option value="Second Floor">Second Floor</option>
+              <option value="Godown">GODOWN</option>
+              <option value="Others">Others</option>
             </select>
           </div>
 

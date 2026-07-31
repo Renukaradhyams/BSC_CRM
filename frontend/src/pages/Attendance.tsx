@@ -208,6 +208,52 @@ export default function Attendance() {
     }
   };
 
+  // Group Status State for Supervisor Team
+  const [selectedSupTeamEmpIds, setSelectedSupTeamEmpIds] = useState<number[]>([]);
+  const [supGroupStatus, setSupGroupStatus] = useState<string>('present');
+  const [updatingSupGroup, setUpdatingSupGroup] = useState<boolean>(false);
+
+  const toggleSelectSupTeamEmp = (id: number) => {
+    setSelectedSupTeamEmpIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAllSupTeam = (displayedEmps: AttendanceRecord[]) => {
+    const displayedIds = displayedEmps.map(e => e.empId);
+    const allSelected = displayedIds.length > 0 && displayedIds.every(id => selectedSupTeamEmpIds.includes(id));
+    if (allSelected) {
+      setSelectedSupTeamEmpIds(prev => prev.filter(id => !displayedIds.includes(id)));
+    } else {
+      setSelectedSupTeamEmpIds(prev => Array.from(new Set([...prev, ...displayedIds])));
+    }
+  };
+
+  const handleSupGroupStatusSubmit = async () => {
+    if (selectedSupTeamEmpIds.length === 0) return;
+    try {
+      setUpdatingSupGroup(true);
+      setSupervisorError('');
+      
+      const promises = selectedSupTeamEmpIds.map(empId => 
+        api.post('/api/attendance', {
+          empId,
+          date: formatDateForApi(new Date()),
+          status: supGroupStatus,
+          markedByName: supervisorInfo?.name
+        })
+      );
+      await Promise.all(promises);
+      
+      setSelectedSupTeamEmpIds([]);
+      // refetch team
+      const res = await api.get(`/api/attendance/supervisor/team?sectionCode=${supervisorInfo.sectionCode}&date=${formatDateForApi(new Date())}`);
+      if (res.data?.ok) setSupervisorTeam(res.data.records || []);
+    } catch {
+      setSupervisorError('Error performing bulk status edit.');
+    } finally {
+      setUpdatingSupGroup(false);
+    }
+  };
+
   const handleGroupEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedEmpIds.length === 0) return;
@@ -1566,9 +1612,45 @@ export default function Attendance() {
 
               {/* Team Attendance Table */}
               <div className="glass-card" style={{ padding: '24px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>
-                  📝 Today's Attendance — {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                    📝 Today's Attendance — {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </h3>
+                  
+                  {selectedSupTeamEmpIds.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Mark Selected As:</span>
+                      <select
+                        value={supGroupStatus}
+                        onChange={(e) => setSupGroupStatus(e.target.value)}
+                        style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, border: '1px solid #CBD5E1', cursor: 'pointer' }}
+                      >
+                        <option value="present">✅ Present</option>
+                        <option value="absent">❌ Absent</option>
+                        <option value="late">⏰ Late</option>
+                        <option value="half_day">🌓 Half Day</option>
+                        <option value="leave">🏖️ On Leave</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleSupGroupStatusSubmit}
+                        disabled={updatingSupGroup}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          background: updatingSupGroup ? '#94A3B8' : '#4F46E5',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          cursor: updatingSupGroup ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {updatingSupGroup ? 'Saving...' : 'Apply Status'}
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {supervisorTeam.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
@@ -1581,6 +1663,14 @@ export default function Attendance() {
                     <table className="data-table">
                       <thead>
                         <tr>
+                          <th style={{ width: '40px' }}>
+                            <input
+                              type="checkbox"
+                              checked={supervisorTeam.length > 0 && supervisorTeam.every(r => selectedSupTeamEmpIds.includes(r.empId))}
+                              onChange={() => toggleSelectAllSupTeam(supervisorTeam)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </th>
                           <th>Emp No</th>
                           <th>Salesman Name</th>
                           <th>Status</th>
@@ -1593,7 +1683,15 @@ export default function Attendance() {
                         {supervisorTeam.map(r => {
                           const isSaving = savingSupEmpId === r.empId;
                           return (
-                            <tr key={r.empId}>
+                            <tr key={r.empId} style={{ background: selectedSupTeamEmpIds.includes(r.empId) ? '#EEF2FF' : 'transparent' }}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedSupTeamEmpIds.includes(r.empId)}
+                                  onChange={() => toggleSelectSupTeamEmp(r.empId)}
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                />
+                              </td>
                               <td className="mono" style={{ fontWeight: 800, color: '#D97706' }}>{r.empNo}</td>
                               <td style={{ fontWeight: 700, color: '#0F172A' }}>{r.userName}</td>
                               <td>
