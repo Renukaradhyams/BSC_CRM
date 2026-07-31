@@ -81,9 +81,10 @@ export default function Attendance() {
   const [supervisorError, setSupervisorError] = useState<string>('');
   const [savingSupEmpId, setSavingSupEmpId] = useState<number | null>(null);
 
-  // Pagination / Limit State
-  const [showAllRegister, setShowAllRegister] = useState<boolean>(false);
-  const [showAllEmployees, setShowAllEmployees] = useState<boolean>(false);
+  // Strict 10-items-per-page Pagination State
+  const [registerPage, setRegisterPage] = useState<number>(1);
+  const [employeePage, setEmployeePage] = useState<number>(1);
+
 
   // Supervisors List for dropdown assignment
   const [supervisorsList, setSupervisorsList] = useState<any[]>([]);
@@ -195,6 +196,14 @@ export default function Attendance() {
     }
   }, [activeTab, fetchEmployees]);
 
+  useEffect(() => {
+    setRegisterPage(1);
+  }, [registerSearch, selectedSectionFilter]);
+
+  useEffect(() => {
+    setEmployeePage(1);
+  }, [employeeSearch]);
+
   // Filtered records by floor/section AND search
   const filteredRecords = records
     .filter(r => selectedSectionFilter === 'ALL' || r.section.toLowerCase().includes(selectedSectionFilter.toLowerCase()) || r.department.toLowerCase().includes(selectedSectionFilter.toLowerCase()))
@@ -203,6 +212,10 @@ export default function Attendance() {
       const q = registerSearch.toLowerCase();
       return r.empNo.toLowerCase().includes(q) || r.userName.toLowerCase().includes(q);
     });
+
+  const totalRegisterPages = Math.ceil(filteredRecords.length / 10) || 1;
+  const paginatedRegisterRecords = filteredRecords.slice((registerPage - 1) * 10, registerPage * 10);
+
 
   // Calculate stats
   const stats = {
@@ -689,10 +702,7 @@ export default function Attendance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {((registerSearch.trim() || selectedSectionFilter !== 'ALL' || showAllRegister)
-                      ? filteredRecords
-                      : filteredRecords.slice(0, 10)
-                    ).map((r) => {
+                    {paginatedRegisterRecords.map((r) => {
                       const isSaving = savingEmpId === r.empId;
                       return (
                         <tr key={r.empId}>
@@ -773,20 +783,35 @@ export default function Attendance() {
               </div>
             )}
 
-            {filteredRecords.length > 10 && !registerSearch.trim() && selectedSectionFilter === 'ALL' && (
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <button
-                  onClick={() => setShowAllRegister(!showAllRegister)}
-                  style={{
-                    padding: '8px 20px', borderRadius: '8px', background: '#EEF2FF',
-                    border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: '12px', fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {showAllRegister ? '▲ Show Top 10 Members Only' : `▼ Show All ${filteredRecords.length} Staff Members (Showing 10 by default)`}
-                </button>
+            {filteredRecords.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', background: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>
+                  Showing <span style={{ fontWeight: 800, color: '#0F172A' }}>{Math.min(filteredRecords.length, (registerPage - 1) * 10 + 1)}–{Math.min(filteredRecords.length, registerPage * 10)}</span> of <span style={{ fontWeight: 800, color: '#0F172A' }}>{filteredRecords.length}</span> staff records (Strictly 10 per page)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterPage(p => Math.max(1, p - 1))}
+                    disabled={registerPage === 1}
+                    style={{ padding: '6px 14px', borderRadius: '8px', background: registerPage === 1 ? '#F1F5F9' : '#EEF2FF', color: registerPage === 1 ? '#94A3B8' : '#4F46E5', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800, cursor: registerPage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ◄ Prev 10
+                  </button>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', padding: '0 6px' }}>
+                    Page {registerPage} of {totalRegisterPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterPage(p => Math.min(totalRegisterPages, p + 1))}
+                    disabled={registerPage >= totalRegisterPages}
+                    style={{ padding: '6px 14px', borderRadius: '8px', background: registerPage >= totalRegisterPages ? '#F1F5F9' : '#EEF2FF', color: registerPage >= totalRegisterPages ? '#94A3B8' : '#4F46E5', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800, cursor: registerPage >= totalRegisterPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Next 10 ►
+                  </button>
+                </div>
               </div>
             )}
+
           </div>
         </>
       )}
@@ -993,9 +1018,11 @@ export default function Attendance() {
                       const filtered = employees.filter(emp => {
                         if (!employeeSearch.trim()) return true;
                         const q = employeeSearch.toLowerCase();
-                        return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q);
+                        return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q) || emp.department.toLowerCase().includes(q) || emp.section.toLowerCase().includes(q);
                       });
-                      const displayed = (employeeSearch.trim() || showAllEmployees) ? filtered : filtered.slice(0, 10);
+                      const totalPages = Math.ceil(filtered.length / 10) || 1;
+                      const displayed = filtered.slice((employeePage - 1) * 10, employeePage * 10);
+
                       return displayed.map(emp => (
                         <tr key={emp.id}>
                           <td className="mono" style={{ fontWeight: 800, color: '#4F46E5' }}>
@@ -1054,20 +1081,45 @@ export default function Attendance() {
               </div>
             )}
 
-            {employees.length > 10 && !employeeSearch.trim() && (
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <button
-                  onClick={() => setShowAllEmployees(!showAllEmployees)}
-                  style={{
-                    padding: '8px 20px', borderRadius: '8px', background: '#EEF2FF',
-                    border: '1px solid #C7D2FE', color: '#4F46E5', fontSize: '12px', fontWeight: 800,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {showAllEmployees ? '▲ Show Top 10 Employees Only' : `▼ Show All ${employees.length} Employees (Showing 10 by default)`}
-                </button>
-              </div>
-            )}
+            {(() => {
+              const filtered = employees.filter(emp => {
+                if (!employeeSearch.trim()) return true;
+                const q = employeeSearch.toLowerCase();
+                return emp.empNo.toLowerCase().includes(q) || emp.name.toLowerCase().includes(q) || emp.department.toLowerCase().includes(q) || emp.section.toLowerCase().includes(q);
+              });
+              const totalPages = Math.ceil(filtered.length / 10) || 1;
+              if (filtered.length === 0) return null;
+
+              return (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '12px', background: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>
+                    Showing <span style={{ fontWeight: 800, color: '#0F172A' }}>{Math.min(filtered.length, (employeePage - 1) * 10 + 1)}–{Math.min(filtered.length, employeePage * 10)}</span> of <span style={{ fontWeight: 800, color: '#0F172A' }}>{filtered.length}</span> active employees (Strictly 10 per page)
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setEmployeePage(p => Math.max(1, p - 1))}
+                      disabled={employeePage === 1}
+                      style={{ padding: '6px 14px', borderRadius: '8px', background: employeePage === 1 ? '#F1F5F9' : '#EEF2FF', color: employeePage === 1 ? '#94A3B8' : '#4F46E5', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800, cursor: employeePage === 1 ? 'not-allowed' : 'pointer' }}
+                    >
+                      ◄ Prev 10
+                    </button>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', padding: '0 6px' }}>
+                      Page {employeePage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEmployeePage(p => Math.min(totalPages, p + 1))}
+                      disabled={employeePage >= totalPages}
+                      style={{ padding: '6px 14px', borderRadius: '8px', background: employeePage >= totalPages ? '#F1F5F9' : '#EEF2FF', color: employeePage >= totalPages ? '#94A3B8' : '#4F46E5', border: '1px solid #CBD5E1', fontSize: '12px', fontWeight: 800, cursor: employeePage >= totalPages ? 'not-allowed' : 'pointer' }}
+                    >
+                      Next 10 ►
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
         </div>
       )}
