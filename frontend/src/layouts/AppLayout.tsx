@@ -618,6 +618,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 )}
               </button>
             </div>
+
+            {/* Mobile Logout Icon */}
+            <button
+              onClick={handleLogout}
+              className="mobile-logout"
+              style={{
+                background: '#FEE2E2',
+                border: '1px solid #FCA5A5',
+                borderRadius: '10px',
+                width: '36px',
+                height: '36px',
+                display: 'none', // Overridden by CSS on mobile
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Sign Out"
+            >
+              🚪
+            </button>
           </div>
         </header>
 
