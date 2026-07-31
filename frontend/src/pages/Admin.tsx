@@ -344,7 +344,8 @@ export default function Admin() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px', alignItems: 'start' }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '24px', alignItems: 'start' }}>
+
             {/* User List Table with Credential Vault */}
             <div className="glass-card" style={{ padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
@@ -971,7 +972,8 @@ export default function Admin() {
       {/* TAB 6: Section Supervisors */}
       {activeTab === 'supervisors' && (
         <div className="fade-in">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '24px', alignItems: 'start' }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '24px', alignItems: 'start' }}>
+
             {/* Add Supervisor Form */}
             <div className="glass-card" style={{ padding: '24px' }}>
               <h3 className="outfit" style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginBottom: '16px' }}>

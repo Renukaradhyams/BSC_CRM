@@ -265,11 +265,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           onClick={() => setMobileOpen(false)}
           className="mobile-sidebar-backdrop"
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)', zIndex: 40
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)',
+            zIndex: 90
           }}
         />
       )}
+
 
 
       {/* Deep Navy Premium Sidebar */}
@@ -533,10 +534,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right Header Live Date/Time, Broadcast & Notification Bell Widget */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
-              <span className="mobile-hide-date">{dateStr}</span>
+            <div className="mobile-hide-datetime" style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
+              <span>{dateStr}</span>
               <span className="mono" style={{ marginLeft: '6px', fontWeight: 700, color: '#0F172A' }}>{timeStr}</span>
             </div>
+
 
 
             {isManagerOrAdmin && (

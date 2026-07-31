@@ -793,7 +793,8 @@ export default function Attendance() {
 
       {/* TAB 2: EMPLOYEE MASTER & BULK REGISTRATION */}
       {activeTab === 'employees' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'start' }}>
+        <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'start' }}>
+
           {/* Left Column: Form & Bulk Upload Card */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Add Single Employee Form */}
